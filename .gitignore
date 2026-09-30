@@ -18,20 +18,20 @@ _ide_helper.php
 _ide_helper_models.php
 
 # ---------- Environment / secrets ----------
-# Never commit real credentials. Share the production .env out-of-band.
+# Never commit real credentials. The production .env is shared out-of-band.
 .env
 .env.*
 !.env.example
 /auth.json
 Homestead.json
 Homestead.yaml
+
+# Private keys and certificates. TLS material is provisioned on the server by
+# certbot (see deploy/certbot/) and must never be committed.
 *.pem
 *.key
 *.crt
 !deploy/nginx/ssl/.gitkeep
-
-# ---------- TLS material (provisioned on the server by certbot) ----------
-/docker/nginx/ssl/*.pem
 
 # ---------- Tooling / editors ----------
 .phpactor.json
@@ -50,7 +50,7 @@ Thumbs.db
 *.log
 
 # ---------- Local working artifacts (not part of the application) ----------
-# Agent scratch space, local DB dumps, infrastructure backups, UI captures.
+# Agent scratch space, local database dumps, infrastructure backups, UI captures.
 .workbuddy/
 backups/
 *.sql
@@ -62,10 +62,8 @@ backups/
 /churchsys2-from-server/
 /PRODUCTION_SERVER.md
 /UPGRADE_PLAN.md
-/*.png
 /production_schema.sql
+/*.png
 
-# ---------- Re-include curated deployment assets ----------
+# ---------- Re-included deployment assets ----------
 !deploy/sql/*.sql
-!deploy/nginx/ssl/.gitkeep
-!/docs/screenshots/*.png
