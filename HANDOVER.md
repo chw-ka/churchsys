@@ -4,7 +4,11 @@
 
 > **本檔案不含任何真實憑證。** 所有密碼與金鑰由系統擁有者另行以安全渠道提供。
 
-儲存庫：<https://github.com/chw-ka/churchsys>（private）
+儲存庫：<https://github.com/chw-ka/churchsys>（**public**，clone 無需 GitHub 帳號）
+
+> **隱私注意**：`docs/screenshots/` 內只保留不含個人資料的截圖；
+> 含會友個資的截圖已從整個 git 歷史移除，**切勿**把任何生產畫面截圖
+> （會友姓名、電話、住址）提交進這個公開儲存庫。
 
 ---
 
@@ -14,12 +18,36 @@
 |---|---|---|---|---|
 | 1 | **生產 `.env`** | 應用的完整環境設定（`APP_KEY`、資料庫密碼） | 系統擁有者 | 專案根目錄 `.env`，**不要提交** |
 | 2 | **Lightsail SSH 私鑰** | 登入生產伺服器部署與排查 | 系統擁有者，或 Lightsail 主控台 | `~/.ssh/`（權限 600） |
-| 3 | **Git 儲存庫存取權** | 讀寫原始碼 | 系統擁有者邀請 GitHub 協作者 | — |
+| 3 | **Git 寫入權（僅改程式碼時需要）** | 把修改推回 GitHub | 註冊免費 GitHub 帳號後由系統擁有者邀請為協作者；或改用下方「無 GitHub 帳號的部署方式」 | — |
 | 4 | **AWS 存取權**（可選） | 管理 Lightsail 執行個體、S3 bucket、檢視快照 | 系統擁有者 | — |
 
 > 伺服器本身**不需要**你的 GitHub 憑證：它已用一組唯讀的 SSH deploy key
 > （`~/.ssh/churchsys_deploy`，GitHub 上標題為 "Lightsail production (read-only)"）
 > 接上 `origin`，因此 `git pull` 可直接運作、而且無法從伺服器推送。
+
+### 1.0 沒有 GitHub 帳號時的工作流
+
+儲存庫是 public，所以**讀取完全不需要帳號**：
+
+```bash
+git clone https://github.com/chw-ka/churchsys.git churchsys && cd churchsys
+```
+
+只有「把修改推回 GitHub」需要帳號。在取得帳號之前，改程式碼後的部署方式：
+
+```bash
+# 1. 在本機改好、跑完測試後，把改動的檔案同步上伺服器
+rsync -av --exclude '.git' --exclude '.env' --exclude 'vendor/' \
+      ./ ubuntu@18.143.26.232:/home/ubuntu/churchsys/
+
+# 2. 在伺服器以本地 commit 記錄這次變更（不需 GitHub）
+ssh ubuntu@18.143.26.232 'cd /home/ubuntu/churchsys && git add -A && git commit -m "描述"'
+
+# 3. 待你日後取得 GitHub 帳號，再把兩邊歷史合流（屆時找系統擁有者協助）
+```
+
+> 日常維運（看 log、重啟容器、備份、查資料庫）**完全不需要改程式碼**，
+> 也就完全不需要 GitHub 帳號——見 `docs/DEPLOYMENT.md`。
 
 ### 1.1 關於 SSH 存取
 
@@ -96,6 +124,9 @@ ssh -i <key>.pem ubuntu@18.143.26.232 'cd /home/ubuntu/churchsys && docker compo
 | 5 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | 已踩過的坑，動手前先看 |
 
 若使用 Claude Code，`CLAUDE.md` 會自動載入，其餘按需要查閱。
+
+若要把整個系統交給 Claude（Claude Cowork / Claude Code）代管，
+可直接使用 [`docs/PROMPT_FOR_CLAUDE.md`](docs/PROMPT_FOR_CLAUDE.md) 內的現成 prompt。
 
 ---
 
