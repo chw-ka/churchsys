@@ -1,0 +1,3 @@
+# TLS certificates are provisioned on the server by certbot (see deploy/certbot/).
+# This directory is mounted into the web container at /etc/nginx/ssl.
+# Do not commit private keys.

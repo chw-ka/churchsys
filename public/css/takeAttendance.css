@@ -1,0 +1,39 @@
+.input_field {
+	margin: 10px 0;
+}
+
+.input_field .input_lbl {
+	width: 100px;
+	float: left;
+}
+
+#welcome_message {
+	font-weight: bold;
+	font-size: 40px;
+	color: red;
+	height: 240px;
+	overflow-y: auto;
+}
+
+/* stat table */
+#stat_table tr td {
+	cursor: pointer;
+}
+
+#stat_table tr.current td {
+	background-color: #cccccc;
+}
+
+/* present table */
+#present {
+	height: 200px;
+	overflow-y: auto;
+}
+
+#present_table tr td {
+	cursor: pointer;
+}
+
+#present_table tr.current td {
+	background-color: #cccccc;
+}

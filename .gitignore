@@ -1,0 +1,71 @@
+# ============================================================
+# ChurchSys — repository .gitignore
+# ============================================================
+
+# ---------- Laravel ----------
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/fonts-manifest.dev.json
+/public/storage
+/storage/*.key
+/storage/pail
+/bootstrap/cache/*.php
+/database/*.sqlite
+/database/*.sqlite-journal
+_ide_helper.php
+_ide_helper_models.php
+
+# ---------- Environment / secrets ----------
+# Never commit real credentials. Share the production .env out-of-band.
+.env
+.env.*
+!.env.example
+/auth.json
+Homestead.json
+Homestead.yaml
+*.pem
+*.key
+*.crt
+!deploy/nginx/ssl/.gitkeep
+
+# ---------- TLS material (provisioned on the server by certbot) ----------
+/docker/nginx/ssl/*.pem
+
+# ---------- Tooling / editors ----------
+.phpactor.json
+.phpunit.result.cache
+.phpunit.cache/
+/.idea
+/.vscode
+/.nova
+/.zed
+/.cursor
+/.codex
+/.fleet
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+*.log
+
+# ---------- Local working artifacts (not part of the application) ----------
+# Agent scratch space, local DB dumps, infrastructure backups, UI captures.
+.workbuddy/
+backups/
+*.sql
+*.sql.gz
+*.tar
+*.tar.gz
+*.dump
+/.lightsail/
+/churchsys2-from-server/
+/PRODUCTION_SERVER.md
+/UPGRADE_PLAN.md
+/*.png
+/production_schema.sql
+
+# ---------- Re-include curated deployment assets ----------
+!deploy/sql/*.sql
+!deploy/nginx/ssl/.gitkeep
+!/docs/screenshots/*.png

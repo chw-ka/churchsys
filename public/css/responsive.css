@@ -1,0 +1,414 @@
+/**
+ * ChurchSys 教會系統易 — Responsive overlay
+ *
+ * Loaded AFTER all legacy CSS (Blueprint / Joomla / Yii).
+ * Desktop (>1024px) appearance is untouched: every rule below lives
+ * inside a max-width media query or is scoped to elements created by
+ * app-responsive.js. Legacy inline styles are only overridden with
+ * !important where unavoidable.
+ *
+ * Breakpoints:
+ *   <=1024px  tablet & below — hamburger nav, stacked take-attendance
+ *   <=767px   phone         — full-width forms, font bump, sticky columns
+ *   <=400px   small phones  — extra tightening
+ */
+
+/* ===================================================================
+ * 0. Elements created by app-responsive.js (all viewports)
+ * =================================================================== */
+
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.table-scroll table {
+    margin-bottom: 0;
+}
+
+.nav-toggle {
+    display: none;
+}
+
+/* Install-app menu item (shown only when browser fires beforeinstallprompt) */
+.install-item {
+    display: none;
+}
+.install-item.is-available {
+    display: list-item;
+}
+
+/* ===================================================================
+ * 1. Tablet and below (<=1024px)
+ * =================================================================== */
+
+@media (max-width: 1024px) {
+
+    /* ---- Global ---- */
+    * {
+        -webkit-tap-highlight-color: rgba(11, 85, 196, 0.12);
+    }
+    img,
+    iframe {
+        max-width: 100%;
+    }
+
+    /* ---- Top bar ---- */
+    #border-top div div {
+        height: 46px;
+    }
+    #border-top .title {
+        font-size: 18px;
+        line-height: 46px;
+        padding-left: 12px;
+    }
+
+    /* ---- Hamburger button ---- */
+    #header-box {
+        position: relative;
+    }
+    .nav-toggle {
+        display: flex;
+        position: absolute;
+        right: 8px;
+        top: 4px;
+        z-index: 1001;
+        width: 44px;
+        height: 40px;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        padding: 0;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .nav-toggle span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        background: #333;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    body.nav-open .nav-toggle span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+    body.nav-open .nav-toggle span:nth-child(2) {
+        opacity: 0;
+    }
+    body.nav-open .nav-toggle span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* ---- Menu: from hover dropdown to tap accordion ---- */
+    #myslidemenu {
+        display: none;
+        border-top: 1px solid #ddd;
+    }
+    body.nav-open #myslidemenu {
+        display: block;
+        padding-top: 48px; /* clear the floating hamburger button */
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+    #myslidemenu #menu > li {
+        float: none !important;
+        display: block;
+        border-left: 0 !important;
+        border-right: 0 !important;
+        border-bottom: 1px solid #e5e5e5;
+    }
+    #myslidemenu #menu li a {
+        font-size: 15px !important;
+        padding: 12px 14px !important;
+        cursor: pointer;
+        background-image: none !important;
+    }
+    #myslidemenu #menu li li {
+        float: none;
+        display: block;
+    }
+    #myslidemenu #menu li li a {
+        padding-left: 30px !important;
+        font-size: 14px !important;
+    }
+    /* Submenus: inline-block flow under their parent (legacy JS sets
+       inline display/width/left, hence !important) */
+    #myslidemenu #menu li ul {
+        position: static !important;
+        left: auto !important;
+        width: auto !important;
+        display: none;
+        border: 0 !important;
+        background: #fafafa !important;
+        box-shadow: none;
+    }
+    #myslidemenu #menu li.has-open > ul {
+        display: block !important;
+    }
+    #myslidemenu .downarrowclass,
+    #myslidemenu .rightarrowclass {
+        display: none !important;
+    }
+    #myslidemenu #menu li form {
+        display: block;
+    }
+    #myslidemenu #menu li form button {
+        font-size: 15px !important;
+        font-weight: bold;
+        padding: 12px 14px !important;
+        width: 100%;
+        text-align: left;
+    }
+
+    /* ---- Frozen columns (JS computes left offsets) ---- */
+    .table-scroll {
+        overflow-x: auto;
+    }
+    .table-scroll table {
+        border-collapse: separate !important;
+        border-spacing: 0;
+    }
+    .table-scroll th.js-sticky,
+    .table-scroll td.js-sticky {
+        position: sticky;
+        z-index: 2;
+        box-shadow: 2px 0 0 rgba(0, 0, 0, 0.10);
+    }
+    .table-scroll thead th.js-sticky {
+        z-index: 3;
+    }
+
+    /* ---- Sign-in (take) page: stack the two columns ---- */
+    .col-main,
+    .col-side {
+        width: 100% !important;
+        float: none !important;
+    }
+    .col-side {
+        margin-top: 14px;
+    }
+    .scroll-box {
+        height: auto !important;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    #welcome_message {
+        font-size: clamp(22px, 7vw, 34px) !important;
+        height: auto !important;
+        min-height: 96px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    #member_code_input {
+        font-size: 18px !important;
+        padding: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+    /* Bigger finger targets inside the take-attendance form */
+    #take_attendance_form input[type="submit"] {
+        min-height: 46px;
+        font-size: 16px;
+    }
+    #take_attendance_form select {
+        font-size: 16px;
+        min-height: 40px;
+    }
+
+    /* ---- Tables keep readable cell padding on tablets ---- */
+    .table-scroll th,
+    .table-scroll td {
+        white-space: nowrap;
+    }
+}
+
+/* ===================================================================
+ * 2. Phone (<=767px)
+ * =================================================================== */
+
+@media (max-width: 767px) {
+
+    body {
+        margin: 0;
+        font-size: 87.5%; /* ~14px instead of Blueprint's 12px */
+    }
+
+    #content-box .padding {
+        padding: 12px 10px 0 10px;
+    }
+    #footer {
+        padding: 10px;
+        margin: 0 10px;
+    }
+
+    h1 {
+        font-size: 1.5em;
+        line-height: 1.2;
+    }
+
+    /* ---- Forms: fluid width, larger targets ---- */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="file"],
+    textarea,
+    select {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    /* Legacy size="60" / cols="50" attributes force fixed char widths */
+    input[size],
+    textarea[cols] {
+        width: 100% !important;
+    }
+    input[type="submit"],
+    button[type="submit"] {
+        min-height: 44px;
+        font-size: 15px;
+        padding: 8px 18px;
+    }
+    div.form .row.buttons input,
+    div.form .row.buttons a {
+        margin-top: 6px;
+    }
+    /* Search bars stack vertically */
+    div.search-form input[type="text"] {
+        width: 100% !important;
+        margin-bottom: 8px;
+        min-height: 40px;
+    }
+    div.search-form input[type="submit"] {
+        width: 100%;
+    }
+    /* Inline hints next to fields wrap to their own line */
+    .row span[style*="margin-left"] {
+        display: block;
+        margin-left: 0 !important;
+        margin-top: 4px;
+    }
+
+    /* ---- Member photos ---- */
+    img[width="200"] {
+        width: 110px;
+        height: auto;
+    }
+    #element-box img[width="200"][style*="float"] {
+        float: right !important;
+        margin: 0 0 8px 8px !important;
+    }
+
+    /* ---- Dashboard stat cells stack 1-per-row ---- */
+    #content-box .stat-cell {
+        display: block;
+        width: 100% !important;
+        padding: 8px 10px !important;
+        border-bottom: 1px dashed #e0e0e0;
+    }
+
+    /* ---- Report index: week pickers get room ---- */
+    ul.report_list form select {
+        max-width: 100%;
+    }
+
+    /* ---- Table cells: slightly tighter but tap-readable ---- */
+    .table-scroll th,
+    .table-scroll td {
+        font-size: 13px;
+        padding: 7px 6px !important;
+        white-space: nowrap;
+    }
+
+    /* ---- Login page: fluid, stacked ---- */
+    .login {
+        width: 100% !important;
+        max-width: 500px;
+        margin-bottom: 24px !important;
+    }
+    #content-box .padding {
+        padding: 30px 0;
+    }
+    #section-box {
+        float: none !important;
+        width: auto !important;
+        margin-left: 0 !important;
+    }
+    #form-login label {
+        float: none;
+        width: auto;
+        text-align: left;
+        padding: 2px 4px;
+    }
+    #form-login input[type="text"],
+    #form-login input[type="password"] {
+        width: 100% !important;
+        min-height: 44px;
+        font-size: 16px; /* prevent iOS zoom-on-focus */
+        box-sizing: border-box;
+    }
+    #form-login .button_holder {
+        padding-left: 0 !important;
+        float: none;
+        padding-top: 10px;
+    }
+    #form-login .button {
+        text-align: left;
+    }
+    #lock {
+        display: none; /* decorative 150x137 image */
+    }
+}
+
+/* ===================================================================
+ * 3. Small phones (<=400px)
+ * =================================================================== */
+
+@media (max-width: 400px) {
+    #border-top .title {
+        font-size: 16px;
+    }
+    .table-scroll th,
+    .table-scroll td {
+        font-size: 12px;
+        padding: 6px 4px !important;
+    }
+}
+
+/* ===================================================================
+ * 4. Notch / home-indicator safe areas (iPhone portrait & landscape)
+ * =================================================================== */
+
+@supports (padding: max(0px)) {
+    @media (max-width: 1024px) {
+        #content-box .padding {
+            padding-left: max(10px, env(safe-area-inset-left));
+            padding-right: max(10px, env(safe-area-inset-right));
+        }
+        body {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    }
+}
+
+/* ===================================================================
+ * 5. Print: never print the hamburger or horizontal scrollers
+ * =================================================================== */
+
+@media print {
+    .nav-toggle {
+        display: none !important;
+    }
+    .table-scroll {
+        overflow: visible !important;
+    }
+    .table-scroll th.js-sticky,
+    .table-scroll td.js-sticky {
+        position: static !important;
+        box-shadow: none !important;
+    }
+}

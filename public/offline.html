@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>離線 — 教會系統易</title>
+<style>
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f6f8;
+        font: normal 15px/1.6 "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+        color: #333;
+    }
+    .card {
+        background: #fff;
+        border: 1px solid #e0e4e8;
+        border-radius: 12px;
+        padding: 36px 28px;
+        max-width: 340px;
+        margin: 20px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+    .icon {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #2E86DE, #0A4AA8);
+    }
+    .icon::before,
+    .icon::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        background: #fff;
+        border-radius: 8px;
+    }
+    .icon::before {
+        width: 14px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+    .icon::after {
+        width: 34px;
+        height: 14px;
+        transform: translate(-50%, -62%);
+    }
+    h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+        color: #0B55C4;
+    }
+    p {
+        margin: 0 0 20px;
+        color: #666;
+    }
+    button {
+        min-height: 44px;
+        padding: 10px 26px;
+        font-size: 15px;
+        font-weight: bold;
+        color: #fff;
+        background: #0B55C4;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    button:active {
+        background: #0A4AA8;
+    }
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="icon"></div>
+    <h1>目前離線</h1>
+    <p>無法連接教會系統易。請檢查網絡連線後重試。<br><br>
+    出席記錄請暫時用紙記低，恢復網絡後可於「補加出席」頁補回。</p>
+    <button onclick="location.reload()">重新連接</button>
+</div>
+</body>
+</html>

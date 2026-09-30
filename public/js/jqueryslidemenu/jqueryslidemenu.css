@@ -1,0 +1,56 @@
+.jqueryslidemenu, .jqueryslidemenu ul, .jqueryslidemenu li { margin: 0; padding: 0; border: 0 none; }
+
+.jqueryslidemenu       { position:relative; z-index: 100;}
+.jqueryslidemenu li    { float:left;  position:relative; list-style: none; display: inline;}
+.jqueryslidemenu li a  { display:block; white-space: nowrap;  }
+.jqueryslidemenu li li { /*width: 100%;*/ clear: both;  /*FF 1.0.7 needs this */  }
+.jqueryslidemenu li ul { visibility: hidden; position:absolute; }
+
+.jqueryslidemenu li li ul {  top: 0; left: 0; }
+
+.jqueryslidemenu li a:hover ul               {  visibility: visible; }
+.jqueryslidemenu li a:hover ul li ul 		  {  visibility: hidden;  }
+.jqueryslidemenu li li a:hover ul      {  visibility: visible;  left: 100%; }
+
+/* ---- Menu layout -------------------------- */
+
+.jqueryslidemenu li {
+	border-left: 1px solid #fff;
+	border-right: 1px solid #d8d8d8;
+}
+.jqueryslidemenu li li { border: 0;}
+
+.jqueryslidemenu ul    { border: 0.1em solid #ccc; background: #f6f6f6 url(../../images/bg-menu.gif) repeat-y left;}
+.jqueryslidemenu ul li.node { background: transparent url(../../images/j_arrow.png) no-repeat right 50%; }
+.jqueryslidemenu ul li.separator { background: #DDE1E6 url(../../images/bg-menu.gif);  height: 1px;  }
+
+.jqueryslidemenu a, .jqueryslidemenu div {
+	padding: 0.35em 1em 0.35em;
+	margin: 0 1px 0 1px;
+	color: #333333;
+	line-height: 1.6em; vertical-align: middle;
+	font-size: 11px; font-weight: bold; text-decoration: none;
+	cursor: default;
+	background-repeat: no-repeat; background-position: left 50%
+}
+
+.jqueryslidemenu li.disabled a { color: gray; }
+
+.jqueryslidemenu ul a {
+	font-size: 11px;
+	font-weight: normal;
+	padding-left: 25px;
+	padding-right: 20px;
+	line-height: 1.2em;
+}
+
+/* 1 level - hover */
+.jqueryslidemenu li a:hover {  background-color: #E7EDDF; border-left: 1px solid #6D9D2E;  border-right:1px solid #6D9D2E; margin: 0; }
+/* 2 level - normal */
+.jqueryslidemenu li li a { background-color: transparent; border: 0 none;   margin: 2px;  }
+/* 2 level - hover */
+.jqueryslidemenu li li a:hover { background-color: #E7EDDF; border: 1px solid #6D9D2E;  margin: 1px;   }
+/* 3 level - normal */
+.jqueryslidemenu li li li a { background-color: transparent; border: 0 none;   margin: 2px;  }
+/* 3 level - hover */
+.jqueryslidemenu li li li a:hover { background-color: #E7EDDF; border: 1px solid #6D9D2E;  margin: 1px;  }

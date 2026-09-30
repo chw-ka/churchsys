@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose exec app php artisan test:*)",
+      "Bash(docker compose exec app php artisan migrate --pretend:*)",
+      "Bash(docker compose exec app php artisan route:list:*)",
+      "Bash(docker compose exec app php artisan tinker --execute:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)"
+    ],
+    "ask": [
+      "Read(./.env)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose down:*)",
+      "Bash(docker compose restart:*)",
+      "Bash(docker compose exec app php artisan migrate:*)",
+      "Bash(docker compose exec app php artisan config:clear:*)",
+      "Bash(docker compose exec app php artisan view:clear:*)"
+    ],
+    "deny": [
+      "Read(./docker/nginx/ssl/**)",
+      "Read(~/Projects/churchsys/docker/nginx/ssl/**)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(docker compose down -v:*)",
+      "Bash(docker volume rm:*)"
+    ]
+  }
+}
