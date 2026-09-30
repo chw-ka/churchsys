@@ -90,12 +90,18 @@ class DomainTest extends TestCase
 
     public function test_a_bcrypt_password_is_not_treated_as_md5(): void
     {
-        $this->assertFalse((new User(['password' => bcrypt('secret')]))->isMd5Password());
+        $hash = '$2y$10$7bqQvyfJEclbZzX5PY3DzuUxwV5nRzukFFnp2eo82YJ6iDp3dcuaS';
+
+        $this->assertFalse((new User(['password' => $hash]))->isMd5Password());
     }
 
     public function test_bcrypt_password_is_verified(): void
     {
-        $user = new User(['password' => bcrypt('secret123')]);
+        // A fixed hash for 'secret123'. Hardcoded on purpose: this is a pure unit
+        // test, so it must not depend on Laravel's bcrypt() helper or a container.
+        $hash = '$2y$10$7bqQvyfJEclbZzX5PY3DzuUxwV5nRzukFFnp2eo82YJ6iDp3dcuaS';
+
+        $user = new User(['password' => $hash]);
 
         $this->assertTrue($user->verifyPassword('secret123'));
         $this->assertFalse($user->verifyPassword('wrong'));
