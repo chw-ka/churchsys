@@ -74,6 +74,20 @@ docker compose up -d --build        # 僅在 Dockerfile / PHP 擴充有變動時
 
 伺服器上的 `/home/ubuntu/churchsys` 已接上 git remote（`origin`），部署即 `git pull`。
 
+### 存取設定（已於 2026-09-30 完成，重建新機時需重做）
+
+| 項目 | 設定 |
+|---|---|
+| Remote | `git@github-churchsys:chw-ka/churchsys.git`（SSH，見 `~/.ssh/config` 的 alias） |
+| 認證 | 專用 SSH deploy key `~/.ssh/churchsys_deploy`，於 GitHub 標記為**唯讀** |
+| 目錄擁有者 | `ubuntu:www-data`，權限 `g+rwX` |
+| Repo 設定 | `core.sharedRepository = group`（新檔案自動群組可寫） |
+
+> 伺服器**只**持有唯讀 deploy key，因此無法從伺服器推送。
+> 若日後需要換 key，重新產生後在 GitHub 的 Settings → Deploy keys 更新即可。
+> 目錄改為 `ubuntu:www-data` 是為了讓 `ubuntu` 能寫入 tracked 檔案，
+> 同時讓容器內的 `www-data`（uid/gid 33，與主機一致）保有寫入 `storage/` 的權限。
+
 ```bash
 ssh -i <key>.pem ubuntu@18.143.26.232
 cd /home/ubuntu/churchsys
@@ -98,8 +112,13 @@ docker compose exec app php artisan migrate --force
   容器網絡主機名（`mysql`），快取後除錯會變得很麻煩，而效能收益有限。
 - `docker/nginx/ssl/` 與 `.env` **不在版控內**，`git pull` 不會覆蓋它們。
   若 `git status` 顯示這兩者被追蹤，代表 `.gitignore` 被改壞了。
-- 檔案擁有者：專案目錄為 `www-data`，部分目錄為 `ubuntu`。
-  若出現權限錯誤，執行 `sudo docker compose exec app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache`。
+- 檔案擁有者：專案目錄與 tracked 檔案為 `ubuntu:www-data`（`g+rwX`），
+  執行期目錄（`storage/`、`bootstrap/cache/`）由容器以 `www-data` 寫入。
+  若出現權限錯誤：
+  ```bash
+  sudo chown -R ubuntu:www-data /home/ubuntu/churchsys
+  sudo chmod -R g+rwX /home/ubuntu/churchsys
+  ```
 
 ### 回滾
 

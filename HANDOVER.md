@@ -4,6 +4,8 @@
 
 > **本檔案不含任何真實憑證。** 所有密碼與金鑰由系統擁有者另行以安全渠道提供。
 
+儲存庫：<https://github.com/chw-ka/churchsys>（private）
+
 ---
 
 ## 1. 需要取得的項目
@@ -14,6 +16,10 @@
 | 2 | **Lightsail SSH 私鑰** | 登入生產伺服器部署與排查 | 系統擁有者，或 Lightsail 主控台 | `~/.ssh/`（權限 600） |
 | 3 | **Git 儲存庫存取權** | 讀寫原始碼 | 系統擁有者邀請 GitHub 協作者 | — |
 | 4 | **AWS 存取權**（可選） | 管理 Lightsail 執行個體、S3 bucket、檢視快照 | 系統擁有者 | — |
+
+> 伺服器本身**不需要**你的 GitHub 憑證：它已用一組唯讀的 SSH deploy key
+> （`~/.ssh/churchsys_deploy`，GitHub 上標題為 "Lightsail production (read-only)"）
+> 接上 `origin`，因此 `git pull` 可直接運作、而且無法從伺服器推送。
 
 ### 1.1 關於 SSH 存取
 
@@ -70,8 +76,8 @@ docker compose exec app php artisan key:generate   # 只在 APP_KEY 為空時
 docker compose exec app php artisan config:clear
 curl -sS -o /dev/null -w '%{http_code}\n' http://localhost/login   # 應為 200
 
-# 6. 測試
-docker compose exec app php artisan test           # 除了 ExampleTest 外全過
+# 6. 測試（應為 39 passed）
+docker compose exec app php artisan test
 
 # 7. 伺服器存取
 ssh -i <key>.pem ubuntu@18.143.26.232 'cd /home/ubuntu/churchsys && docker compose ps'
@@ -95,15 +101,27 @@ ssh -i <key>.pem ubuntu@18.143.26.232 'cd /home/ubuntu/churchsys && docker compo
 
 ## 4. 交接當下的系統狀態
 
-> 記錄時間：2026-09-30
+> 記錄時間：2026-09-30，以下項目均已實測驗證。
 
 | 項目 | 狀態 |
 |---|---|
-| 生產環境 | Lightsail `18.143.26.232`，`https://churchsys.cmals.org` 運作中（HTTP 200） |
-| 資料庫 | 4,723 位會友、219,860 筆出席紀錄、58 個帳號 |
+| 生產環境 | Lightsail `18.143.26.232`，`https://churchsys.cmals.org`（HTTP 200） |
+| 資料庫 | 4,723 位會友、219,860 筆出席紀錄、58 個帳號、31 張表 |
 | TLS 憑證 | 有效至 2026-12-28，`certbot.timer` 自動續期 |
-| 版本控制 | 生產目錄已接上 git remote，部署改為 `git pull` |
+| 版本控制 | 生產目錄已接上 git remote（SSH deploy key，唯讀），部署改為 `git pull` |
+| 測試 | 39 passed / 174 assertions，全部在 SQLite in-memory 執行 |
 | 舊 EC2 | `54.169.156.17` 仍在運作，已完成完整備份，**待停用** |
+
+### 交接時一併修正的問題
+
+| 問題 | 影響 | 處理 |
+|---|---|---|
+| 應用時區為 UTC，但資料庫時間戳是香港時間 | 新簽到會早 8 小時，清晨簽到甚至記到前一日 | `config/app.php` 改為 `Asia/Hong_Kong`，已實測寫入正確 |
+| `php artisan migrate` 會在生產建立多餘的 `users` 等空表後中斷 | 生產 schema 被靜默改動 | 三個 Laravel 骨架 migration 改為單一冪等版本，已實測為空操作 |
+| 測試套件連上生產資料庫 | `RefreshDatabase` 會執行 `migrate:fresh`，可能刪光教會資料 | 加入 `tests/bootstrap.php` 強制設定 + `TestCase` 連線斷言 |
+| `ExampleTest` 斷言 `/` 回 200，但該路由需要登入 | 測試永遠有一個紅燈 | 改為 `AuthenticationTest` 與 `DomainTest` |
+
+上述四項的成因與排查方式都寫進了 [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)（§2、§16、§17）。
 
 ### 尚未完成的事項
 

@@ -378,6 +378,71 @@ DROP TABLE IF EXISTS `sessions`;
 
 ---
 
+## 17. ★ 測試套件連上了生產資料庫
+
+**症狀**：在 `app` 容器內執行 `php artisan test`，錯誤訊息顯示
+
+```
+SQLSTATE[HY000]: General error: 1364 Field 'gender' doesn't have a default value
+(Connection: mysql, Host: mysql, Port: 3306, Database: churchsys, ...)
+```
+
+測試應該跑在 SQLite in-memory，卻連上了 `churchsys` 生產庫。
+
+**為何危險**：測試用 `RefreshDatabase`，它會呼叫 `migrate:fresh`
+——**會刪光目標資料庫的所有資料表**。這次僥倖沒有釀成災難，只因為
+`APP_ENV=production` 也一併洩漏，Laravel 因此拒絕執行破壞性指令。
+寫入動作則全被包在交易中並回滾，所以沒有留下測試資料。
+
+**成因**：`docker-compose.yml` 用 `environment:` 為容器設定了**真實的環境變數**
+（`APP_ENV=production`、`DB_CONNECTION=mysql`、`DB_DATABASE=churchsys`）。
+PHPUnit 的 `<env>` 只會填入「程序中尚未存在」的變數，
+所以 `phpunit.xml` 裡的設定全部被忽略。
+
+**注意**：即使把 `<env>` 加上 `force="true"` **仍然無效**，已實測。
+
+**修正**（已完成）：改用 PHPUnit bootstrap 強制設定。
+PHPUnit 會在建立 Laravel 應用之前載入 bootstrap，而 `bootstrap/app.php`
+以 *immutable* 方式載入 `.env`（不覆蓋既有的變數），所以在 bootstrap 內
+寫入的值必然生效。
+
+`phpunit.xml`：
+
+```xml
+bootstrap="tests/bootstrap.php"
+```
+
+`tests/bootstrap.php`：
+
+```php
+require __DIR__.'/../vendor/autoload.php';
+
+foreach ([
+    'APP_ENV'       => 'testing',
+    'DB_CONNECTION' => 'sqlite',
+    'DB_DATABASE'   => ':memory:',
+    // ...
+] as $key => $value) {
+    putenv("{$key}={$value}");
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
+```
+
+`tests/TestCase.php` 再加一道防線，`setUp()` 時檢查連線：
+
+```php
+if (! $isSqlite) {
+    $this->fail('Tests are about to run against the "mysql" connection ...');
+}
+```
+
+**教訓**：容器化的 Laravel 專案若在 `environment:` 內硬寫應用設定，
+測試環境會被靜默污染。測試相關的設定應由 bootstrap 或 `phpunit.xml`
+**強制**指定，並加上執行期的斷言檢查。
+
+---
+
 ## 附錄：新增問題的格式
 
 回答以下幾點，讓下一個人不必重新摸索：

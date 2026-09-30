@@ -67,18 +67,25 @@ docker compose exec -T mysql mysql -uroot -p"$DB_ROOT_PASSWORD" churchsys < depl
 docker compose exec app php artisan test
 ```
 
-測試使用 SQLite in-memory（見 `phpunit.xml`），schema 由兩個 migration 建立，
-**不需要 MySQL**：
+測試使用 **SQLite in-memory**，schema 由兩個 migration 建立，**不需要 MySQL**：
 
 - `database/migrations/0001_01_01_000000_create_framework_tables.php` — framework 表，
   每張表都先檢查存在才建立
 - `database/migrations/2026_09_29_000001_create_churchsys_tables.php` — 四張核心表
 
 兩個 migration 都是**冪等**的，所以在任何環境執行 `php artisan migrate` 都安全。
+
+> ⚠️ **測試絕對不可以連上生產資料庫。**
+> 生產容器會匯出 `APP_ENV=production`、`DB_CONNECTION=mysql`、`DB_DATABASE=churchsys`，
+> 這些真實環境變數會蓋過 `phpunit.xml` 的 `<env>`（即使加了 `force="true"` 亦然）。
+> 因此本專案用 `tests/bootstrap.php` 在 Laravel 啟動前強制寫入測試環境變數
+> （`phpunit.xml` 的 `bootstrap` 指向它）。`tests/TestCase.php` 再加一道防線：
+> 若解析出來的資料庫不是 SQLite，測試會立即中止。
+>
+> 這兩層機制請勿移除。詳細原因見 `docs/TROUBLESHOOTING.md` §17。
+
 撰寫新測試時請注意：MySQL 專屬函式（`YEAR()`、`WEEKOFYEAR()`、`DAYOFYEAR()`）
 在 SQLite 不能執行。
-
-`tests/Feature/ExampleTest.php` 預期失敗（`/` 對未登入使用者回 302），這是正常的。
 
 ---
 
@@ -371,6 +378,7 @@ docker compose exec -T mysql mysqldump -uroot -p"$DB_ROOT_PASSWORD" \
 - **不要直接 `UPDATE` / `DELETE` 生產資料庫**，除非已備份且使用者明確要求。
 - **不要把時區改回 UTC**（§6.1）。
 - **不要移除 `preg_split` 的 `/u`**（§6.2）。
+- **不要移除測試的兩道防護**（`tests/bootstrap.php` 與 `tests/TestCase.php` 的連線檢查，§3.2）。
 - **不要引入 Vite / Tailwind 建置流程**（§2）。
 - **不要重寫八個報告頁的原生 SQL**（§9）。
 - **不要調整 `layouts/app.blade.php` 的 CSS/JS 載入順序**（§10）。
