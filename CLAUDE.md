@@ -67,10 +67,16 @@ docker compose exec -T mysql mysql -uroot -p"$DB_ROOT_PASSWORD" churchsys < depl
 docker compose exec app php artisan test
 ```
 
-測試使用 SQLite in-memory（見 `phpunit.xml`），schema 由
-`database/migrations/2026_09_29_000001_create_churchsys_tables.php` 建立，
-**不需要 MySQL**。撰寫新測試時請注意：MySQL 專屬函式（`YEAR()`、`WEEKOFYEAR()`、
-`DAYOFYEAR()`）在 SQLite 不能執行。
+測試使用 SQLite in-memory（見 `phpunit.xml`），schema 由兩個 migration 建立，
+**不需要 MySQL**：
+
+- `database/migrations/0001_01_01_000000_create_framework_tables.php` — framework 表，
+  每張表都先檢查存在才建立
+- `database/migrations/2026_09_29_000001_create_churchsys_tables.php` — 四張核心表
+
+兩個 migration 都是**冪等**的，所以在任何環境執行 `php artisan migrate` 都安全。
+撰寫新測試時請注意：MySQL 專屬函式（`YEAR()`、`WEEKOFYEAR()`、`DAYOFYEAR()`）
+在 SQLite 不能執行。
 
 `tests/Feature/ExampleTest.php` 預期失敗（`/` 對未登入使用者回 302），這是正常的。
 
@@ -114,7 +120,7 @@ deploy/                         部署產物（伺服器實際使用）
   certbot/churchsys-copy.sh     Let's Encrypt 續期後複製憑證並重載 nginx
   sql/00_schema.sql             生產資料庫完整結構（30 張表，無資料）
   sql/01_schema_fix_utf8mb4.sql 歷史修正：utf8mb4 轉換、zero-date、密碼欄長度
-  sql/02_laravel_framework_tables.sql  cache / sessions / jobs 等 Laravel 表
+  sql/02_laravel_framework_tables.sql  cache / cache_locks / jobs / failed_jobs
 
 docs/                           深入文件（架構、資料庫、部署、疑難排解）
 ```
@@ -298,10 +304,17 @@ git pull --ff-only
 docker compose up -d --build          # 僅在 Dockerfile / 依賴有變動時需要
 docker compose exec app php artisan config:clear
 docker compose exec app php artisan view:clear
-docker compose exec app php artisan migrate --force   # 安全：baseline migration 會自動跳過
+docker compose exec app php artisan migrate --force   # 安全：兩個 migration 都是冪等的
 ```
 
 更新後請清 `config` 與 `view` 快取；**不要**在生產執行 `php artisan optimize`。
+
+> **關於 `migrate`**：本專案的 migration 只有兩個，且都先檢查資料表是否存在才建立，
+> 因此在生產環境執行是空操作。生產資料庫結構本身來自舊系統，並非由 migration 管理
+> ——結構變更請以 `deploy/sql/` 底下的編號 SQL 檔案記錄（見 `docs/DATABASE.md` §5）。
+
+> **本專案沒有 Laravel 預設的 `users`、`password_reset_tokens`、`sessions` 表。**
+> 認證讀 `tbl_user`，session 與 cache 都是檔案式。這是刻意的，請勿「補回」。
 
 完整部署、SSL、DNS、備份說明見 `docs/DEPLOYMENT.md`。
 

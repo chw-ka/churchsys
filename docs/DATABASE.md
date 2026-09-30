@@ -64,7 +64,8 @@ docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
 | `tbl_member_relationship` | 0 | 會友關係 |
 | `tbl_worship_greeting` / `tbl_worship_remarks` | 0 / 0 | 崇拜問候／備註 |
 | `AuthItem` / `AuthItemChild` / `AuthAssignment` / `Rights` | 63 / 55 / 55 / 0 | 舊 Yii RBAC 權限 |
-| `cache` / `cache_locks` / `jobs` / `failed_jobs` | 0 | Laravel 框架表 |
+| `cache` / `cache_locks` / `jobs` / `job_batches` / `failed_jobs` | 0 | Laravel 框架表 |
+| `migrations` | — | Laravel migration 紀錄（追蹤兩個冪等 migration） |
 
 > **不要刪除遺留表。** 教會日後可能要求把小組、詩歌、課程等模組補回 Laravel 版本，
 > 這些歷史資料是唯一來源。移除前請先取得教會書面同意。
@@ -223,12 +224,24 @@ GROUP BY d ORDER BY d;
 
 ### 5.1 本機／測試
 
-`database/migrations/` 內只有一個應用專屬 migration：
-`2026_09_29_000001_create_churchsys_tables.php`，建立 4 張核心表供全新安裝與
-SQLite 測試使用。它的 `up()` 在 `tbl_member` 或 `tbl_worship` 已存在時會直接返回，
-所以 `php artisan migrate` 在生產環境是安全的空操作。
+`database/migrations/` 內只有兩個應用專屬 migration：
 
+| Migration | 內容 |
+|---|---|
+| `0001_01_01_000000_create_framework_tables.php` | `cache`、`cache_locks`、`jobs`、`job_batches`、`failed_jobs` |
+| `2026_09_29_000001_create_churchsys_tables.php` | `tbl_user`、`tbl_member`、`tbl_worship`、`tbl_worship_attendance` |
+
+兩者的 `up()` 都是**冪等**的——每一張表都先以 `Schema::hasTable()` 檢查才建立，
+所以 `php artisan migrate` 在任何環境執行都安全（在生產環境是空操作）。
+
+`2026_09_29_000001` 建立的只是**最小**結構，足以讓全新安裝與 SQLite 測試運作。
+完整結構（30 張表，含遺留的小組、課程、詩歌表）見 `deploy/sql/00_schema.sql`。
 若要在測試中用到其他表，請擴充這個 migration 而非新增。
+
+> **本專案沒有 Laravel 預設的 `users`、`password_reset_tokens`、`sessions` 表。**
+> 認證讀 `tbl_user`（`config/auth.php` 指向 `App\Models\User`），
+> session 與 cache 都是檔案式。`laravel/laravel` 骨架帶來的這三個 migration 與
+> `UserFactory` 已移除——它們建立的表應用從不使用，且在生產環境會直接建立空表。
 
 ### 5.2 生產
 

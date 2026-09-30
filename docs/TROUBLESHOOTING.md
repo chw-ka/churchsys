@@ -335,6 +335,49 @@ const browser = await chromium.launch({
 
 ---
 
+## 16. ★ 在生產執行 `migrate` 竟然建立了新表
+
+**症狀**：在生產環境執行 `php artisan migrate`，出現
+
+```
+0001_01_01_000000_create_users_table ......................... DONE
+0001_01_01_000001_create_cache_table ......................... FAIL
+SQLSTATE[42S01]: Base table or view already exists: 1050 Table 'cache' already exists
+```
+
+結果資料庫多出 `users`、`password_reset_tokens`、`sessions` 三張**應用完全不使用**的空表。
+
+**成因**：專案由 `laravel/laravel` 骨架建立，附帶了三個預設 migration。
+但 ChurchSys 的認證讀 `tbl_user`、session 與 cache 都是檔案式，
+這三個 migration 建立的表在此專案中是多餘的。
+在生產環境執行時，`users` 因為不存在所以被建立，`cache` 因為已存在而報錯中止。
+
+**修正**（已於 2026-09-30 完成）：三個骨架 migration 與 `UserFactory` 已從版控移除，
+改為單一冪等的 `0001_01_01_000000_create_framework_tables.php`：
+
+```php
+if (! Schema::hasTable('cache')) {
+    Schema::create('cache', function (Blueprint $table) { /* ... */ });
+}
+```
+
+每張表都先檢查存在才建立，因此 `php artisan migrate` 在任何環境都是安全操作。
+`DatabaseSeeder` 同時改為空實作（原本會寫入不存在的 `users` 表而失敗）。
+
+**若在其他舊環境遇到此問題**，清理方式：
+
+```sql
+DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `password_reset_tokens`;
+DROP TABLE IF EXISTS `sessions`;
+```
+
+**教訓**：從 `laravel/laravel` 骨架起步的專案，若不用預設的 `users` / `sessions`
+機制，就應該把對應的骨架 migration 移除或加上 `Schema::hasTable()` 保護，
+否則生產環境的 `migrate` 隨時會偷偷改動 schema。
+
+---
+
 ## 附錄：新增問題的格式
 
 回答以下幾點，讓下一個人不必重新摸索：
