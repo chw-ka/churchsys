@@ -1,21 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Every <env> below sets force="true".
+    Tests MUST NOT touch a real database.
 
-    Without it PHPUnit only fills in variables that are not already present in the
-    process environment. The production containers export APP_ENV=production,
-    DB_CONNECTION=mysql and DB_DATABASE=churchsys (see docker-compose.yml), so
-    running `php artisan test` inside the app container silently connected the
-    test suite to the LIVE database instead of SQLite. force="true" makes the
-    settings here always win.
+    bootstrap="tests/bootstrap.php" is the mechanism that guarantees this: it
+    writes the test environment variables before Laravel boots, because the
+    production containers export APP_ENV=production / DB_CONNECTION=mysql /
+    DB_DATABASE=churchsys and those take precedence over the <env> entries below.
 
-    tests/TestCase.php additionally aborts if the resolved database is not SQLite,
-    so an accidental connection to a real database fails loudly instead of
-    writing to it.
+    The <env> entries are kept as documentation and as a fallback; every one of
+    them sets force="true" so it wins over an inherited variable.
+
+    tests/TestCase.php aborts the run if the resolved database is not SQLite.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
+         bootstrap="tests/bootstrap.php"
          colors="true"
 >
     <testsuites>
