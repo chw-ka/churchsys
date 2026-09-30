@@ -330,7 +330,7 @@ docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" churchsys
 docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
   --default-character-set=utf8mb4 churchsys -e "SELECT id, code, name FROM tbl_member LIMIT 5;"
 
-# 備份（出席紀錄約 22 萬筆，成員約 4,500 筆）
+# 備份（出席紀錄 219,860 筆，會友 4,723 位）
 docker compose exec -T mysql mysqldump -uroot -p"$DB_ROOT_PASSWORD" \
   --single-transaction --routines --triggers churchsys | gzip > backup_$(date +%F).sql.gz
 ```

@@ -100,7 +100,7 @@ ssh -i <key>.pem ubuntu@18.143.26.232 'cd /home/ubuntu/churchsys && docker compo
 | 項目 | 狀態 |
 |---|---|
 | 生產環境 | Lightsail `18.143.26.232`，`https://churchsys.cmals.org` 運作中（HTTP 200） |
-| 資料庫 | 4,469 位會友、219,792 筆出席紀錄、58 個帳號 |
+| 資料庫 | 4,723 位會友、219,860 筆出席紀錄、58 個帳號 |
 | TLS 憑證 | 有效至 2026-12-28，`certbot.timer` 自動續期 |
 | 版本控制 | 生產目錄已接上 git remote，部署改為 `git pull` |
 | 舊 EC2 | `54.169.156.17` 仍在運作，已完成完整備份，**待停用** |

@@ -16,7 +16,7 @@
 | 密碼 | 見 `.env` 的 `DB_PASSWORD` / `DB_ROOT_PASSWORD` |
 | 字元集 | `utf8mb4` / `utf8mb4_unicode_ci` |
 | 時區 | 無時區轉換；`DATETIME` 欄位存香港本地時間（見 [`../CLAUDE.md`](../CLAUDE.md) §6.1） |
-| 資料量 | 約 22 萬筆出席紀錄、4,469 位會友、58 個帳號 |
+| 資料量 | 約 219,860 筆出席紀錄、4,723 位會友、58 個帳號 |
 
 以命令列查中文時請加 `--default-character-set=utf8mb4`，否則會看到 `???`：
 
@@ -43,9 +43,9 @@ docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
 
 | 表 | 筆數 | 用途 |
 |---|---|---|
-| `tbl_member` | 4,469 | 會友主檔 |
+| `tbl_member` | 4,723 | 會友主檔 |
 | `tbl_worship` | 13 | 崇拜場次定義 |
-| `tbl_worship_attendance` | 219,792 | **崇拜出席紀錄（系統核心資料）** |
+| `tbl_worship_attendance` | 219,860 | **崇拜出席紀錄（系統核心資料）** |
 | `tbl_user` | 58 | 後台登入帳號 |
 | `tbl_group_period` | 11 | 小組期間（報告頁分組用） |
 | `tbl_group` | 48 | 小組 |
