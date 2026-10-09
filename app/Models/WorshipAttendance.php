@@ -16,7 +16,8 @@ class WorshipAttendance extends Model
     ];
 
     protected $casts = [
-        'attendance_date' => 'date',
+        // datetime (not date): the time part is displayed on the take-attendance list
+        'attendance_date' => 'datetime',
     ];
 
     public function worship()

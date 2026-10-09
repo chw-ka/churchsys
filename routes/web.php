@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
 
     // Worship Attendance
     Route::get('/worship/attendance/take', [WorshipAttendanceController::class, 'take'])->name('worship.take');
+    Route::get('/worship/attendance/take-data', [WorshipAttendanceController::class, 'takeData'])->name('worship.attendance.take-data');
     Route::post('/worship/attendance/checkin', [WorshipAttendanceController::class, 'checkin'])->name('worship.attendance.checkin');
     Route::get('/worship/attendance/admin-take', [WorshipAttendanceController::class, 'adminTake'])->name('worship.attendance.admin-take');
     Route::post('/worship/attendance/admin-take', [WorshipAttendanceController::class, 'adminStore'])->name('worship.attendance.admin-store');

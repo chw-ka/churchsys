@@ -354,9 +354,9 @@ docker compose exec -T mysql mysqldump -uroot -p"$DB_ROOT_PASSWORD" \
    `tbl_worship_attendance` 沒有 `id` 欄位，但程式用 `findOrFail($id)` 與
    `DELETE /worship/attendance/{id}` 路由。需要改用複合鍵刪除。
 
-2. **簽到後的名單時間永遠顯示 `00:00`。**
-   `WorshipAttendance` 把 `attendance_date` cast 成 `'date'`，時間部分被截掉，
-   而 `checkin()` 卻用 `format('H:i')` 輸出。需要改為 `'datetime'` cast。
+2. ~~**簽到後的名單時間永遠顯示 `00:00`。**~~（已於 2026-10-09 修復：
+   `WorshipAttendance` 的 `attendance_date` cast 由 `date` 改為 `datetime`，
+   並新增 `tests/Feature/WorshipCheckinTest.php` 驗證時間部分保留。）
 
 3. **模型引用了不存在的類別。**
    `Member::groups()`、`Member::groupAttendances()`、`GroupPeriod::groups()` 指向

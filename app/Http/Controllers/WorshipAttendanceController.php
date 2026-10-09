@@ -21,38 +21,89 @@ class WorshipAttendanceController extends Controller
         $today = today()->toDateString();
 
         // Get today's attendance counts per worship
-        $todayCounts = WorshipAttendance::whereDate('attendance_date', $today)
-            ->select('worship_id', DB::raw('COUNT(*) as count'))
-            ->groupBy('worship_id')
-            ->pluck('count', 'worship_id');
+        $todayCounts = $this->todayCounts();
 
-        return view('worship.take', compact('worships', 'today', 'todayCounts'));
+        // Server-render the initial checked-in list for the default worship,
+        // so the list is never blank on page load / refresh
+        $todayList = $this->todayListHtml($worships->first()->id ?? 0);
+
+        return view('worship.take', compact('worships', 'today', 'todayCounts', 'todayList'));
     }
 
     /**
-     * Process attendance check-in via member code
+     * JSON feed for the take-attendance page: today's checked-in list and
+     * per-worship counts. Polled by every open device so all ushers see
+     * the same state without manual note-taking.
+     */
+    public function takeData(Request $request)
+    {
+        $request->validate([
+            'worship_id' => 'required|integer|exists:tbl_worship,id',
+        ]);
+
+        return response()->json([
+            'success'     => true,
+            'worship_id'  => (int) $request->worship_id,
+            'html'        => $this->todayListHtml((int) $request->worship_id),
+            'counts'      => $this->todayCounts(),
+            'server_time' => now()->format('H:i:s'),
+        ]);
+    }
+
+    /**
+     * Process attendance check-in via member code, member id, or exact name
      */
     public function checkin(Request $request)
     {
         $request->validate([
-            'member_code' => 'required|string|max:10',
-            'worship_id' => 'required|integer|exists:tbl_worship,id',
+            'member_id'   => 'nullable|integer',
+            'member_code' => 'required_without:member_id|string|max:255',
+            'worship_id'  => 'required|integer|exists:tbl_worship,id',
         ]);
 
-        $member = Member::where('code', $request->member_code)
-            ->where('state', Member::STATE_ACTIVE)
-            ->first();
+        $worshipId = (int) $request->worship_id;
+
+        // 1) Explicit member id (from autocomplete / candidate pick)
+        $member = $request->filled('member_id')
+            ? Member::active()->find($request->integer('member_id'))
+            : null;
+
+        // 2) Exact code match
+        if (!$member && $request->filled('member_code')) {
+            $member = Member::active()->where('code', trim($request->member_code))->first();
+        }
+
+        // 3) Exact name match (single hit only)
+        if (!$member && $request->filled('member_code')) {
+            $input = trim($request->member_code);
+            $matches = Member::active()->where('name', $input)->get();
+
+            if ($matches->count() > 1) {
+                return response()->json([
+                    'success'    => false,
+                    'ambiguous'  => true,
+                    'message'    => '同名會友多於一位，請點選正確會友',
+                    'candidates' => $matches->map(fn ($m) => [
+                        'id'   => $m->id,
+                        'name' => $m->name,
+                        'code' => $m->code,
+                    ])->values(),
+                ], 422);
+            }
+
+            $member = $matches->first();
+        }
 
         if (!$member) {
             return response()->json([
                 'success' => false,
-                'message' => '編號找不到，請確認會友編號',
+                'message' => '編號或姓名找不到，請確認後再試',
             ], 404);
         }
 
         // Check if already checked in for this worship today
         $exists = WorshipAttendance::where('member_id', $member->id)
-            ->where('worship_id', $request->worship_id)
+            ->where('worship_id', $worshipId)
             ->whereDate('attendance_date', today())
             ->exists();
 
@@ -65,36 +116,62 @@ class WorshipAttendanceController extends Controller
 
         WorshipAttendance::create([
             'member_id' => $member->id,
-            'worship_id' => $request->worship_id,
+            'worship_id' => $worshipId,
             'attendance_date' => now(),
         ]);
 
-        // Build today's attendance list HTML
+        return response()->json([
+            'success' => true,
+            'message' => "✓ {$member->name} ({$member->code}) 簽到成功",
+            'member' => [
+                'id'   => $member->id,
+                'name' => $member->name,
+                'code' => $member->code,
+            ],
+            'html'   => $this->todayListHtml($worshipId),
+            'counts' => $this->todayCounts(),
+        ]);
+    }
+
+    /**
+     * Today's per-worship attendance counts (keyed by worship id)
+     */
+    private function todayCounts()
+    {
+        return WorshipAttendance::whereDate('attendance_date', today())
+            ->select('worship_id', DB::raw('COUNT(*) as count'))
+            ->groupBy('worship_id')
+            ->pluck('count', 'worship_id');
+    }
+
+    /**
+     * Render today's checked-in list for one worship as HTML
+     */
+    private function todayListHtml(int $worshipId): string
+    {
         $todayAttendances = WorshipAttendance::whereDate('attendance_date', today())
-            ->where('worship_id', $request->worship_id)
+            ->where('worship_id', $worshipId)
             ->with('member')
             ->orderBy('attendance_date', 'desc')
             ->get();
 
+        if ($todayAttendances->isEmpty()) {
+            return '<p style="color:#999;text-align:center;">暫無簽到記錄</p>';
+        }
+
         $html = '<table style="width:100%;border-collapse:collapse;">';
         foreach ($todayAttendances as $att) {
-            $time = \Carbon\Carbon::parse($att->attendance_date)->format('H:i');
+            $time = $att->attendance_date?->format('H:i') ?? '';
+            $name = $att->member?->name ?? '（已刪除會友）';
+            $code = $att->member?->code ?? '';
             $html .= '<tr>';
-            $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . e($att->member->name . ' (' . $att->member->code . ')') . '</td>';
-            $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . $time . '</td>';
+            $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . e(trim($name . ' (' . $code . ')')) . '</td>';
+            $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . e($time) . '</td>';
             $html .= '</tr>';
         }
         $html .= '</table>';
 
-        return response()->json([
-            'success' => true,
-            'message' => "{$member->name} 簽到成功",
-            'member' => [
-                'name' => $member->name,
-                'code' => $member->code,
-            ],
-            'html' => $html,
-        ]);
+        return $html;
     }
 
     /**
