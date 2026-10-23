@@ -1,4 +1,7 @@
-FROM php:8.3-fpm
+# Pin to a patched patch-release. 8.3.36 fixes CVE-2026-109618 / CVE-2026-109619
+# (php2shell, unauthenticated RCE, CVSS 9.2). Do not revert to the floating
+# 8.3-fpm tag: pinning makes rebuilds reproducible.
+FROM php:8.3.36-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
