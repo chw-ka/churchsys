@@ -287,9 +287,15 @@ class WorshipAttendanceController extends Controller
 
     /**
      * List attendance by member
+     *
+     * The 類別 filter restores a feature of the old Yii screen: without it the
+     * list mixes 會友 with 新朋友 (temporary members), which pushes the real
+     * membership onto 120+ pages. Default is 會友 + 同工.
      */
     public function listByMember(Request $request)
     {
+        $type = $this->accountTypeFilter($request->get('type'));
+
         $query = Member::active()
             ->withCount([
                 'worshipAttendances as last_date' => fn($q) => $q->select(DB::raw('MAX(attendance_date)')),
@@ -299,6 +305,8 @@ class WorshipAttendanceController extends Controller
             ])
             ->orderBy('code');
 
+        $this->applyAccountTypeFilter($query, $type);
+
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")
@@ -306,9 +314,92 @@ class WorshipAttendanceController extends Controller
             });
         }
 
-        $members = $query->paginate(30);
+        $members = $query->paginate(30)->appends($request->query());
 
-        return view('worship.list_by_member', compact('members'));
+        return view('worship.list_by_member', compact('members', 'type'));
+    }
+
+    /**
+     * Member-level drill-down of one week (optionally one worship) of the
+     * weekly matrix — the equivalent of the old listByWorshipWeek / listByDate
+     * screens, which the rewrite dropped.
+     */
+    public function listByWorshipDetail(Request $request)
+    {
+        $validated = $request->validate([
+            'start'      => 'required|date',
+            'end'        => 'required|date|after_or_equal:start',
+            'worship_id' => 'nullable|integer|exists:tbl_worship,id',
+            'search'     => 'nullable|string|max:255',
+        ]);
+
+        $start = $validated['start'];
+        $end = $validated['end'];
+        $worshipId = $validated['worship_id'] ?? null;
+        $search = trim($validated['search'] ?? '');
+        $type = $this->accountTypeFilter($request->get('type'), 'all');
+
+        $worships = Worship::active()->orderBy('weekly')->orderBy('start_time')->get();
+
+        $query = WorshipAttendance::with(['member', 'worship'])
+            ->whereBetween('attendance_date', [$start . ' 00:00:00', $end . ' 23:59:59'])
+            ->when($worshipId, fn ($q) => $q->where('worship_id', $worshipId))
+            ->orderBy('attendance_date')
+            ->orderBy('worship_id');
+
+        if ($search !== '') {
+            $query->whereHas('member', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        $this->applyAccountTypeFilter($query, $type, 'member');
+
+        $attendances = $query->paginate(50)->appends($request->query());
+
+        $worshipName = $worshipId
+            ? optional($worships->firstWhere('id', (int) $worshipId))->name
+            : null;
+
+        return view('worship.attendance_detail', compact(
+            'attendances', 'start', 'end', 'worshipId', 'worshipName', 'worships', 'type', 'search'
+        ));
+    }
+
+    /**
+     * Allowed 類別 filter values. Unknown input falls back to 全部.
+     */
+    private function accountTypeFilter(?string $type, string $default = 'member'): string
+    {
+        $allowed = ['all', 'member', 'member_only', 'co_member', 'new'];
+
+        return in_array($type, $allowed, true) ? $type : $default;
+    }
+
+    /**
+     * Apply the 類別 filter to a Member query or a WorshipAttendance query
+     * (the latter through its member relation).
+     */
+    private function applyAccountTypeFilter($query, string $type, ?string $relation = null)
+    {
+        $types = match ($type) {
+            'member'      => [Member::ACCOUNT_TYPE_MEMBER, Member::ACCOUNT_TYPE_CO_MEMBER],
+            'member_only' => [Member::ACCOUNT_TYPE_MEMBER],
+            'co_member'   => [Member::ACCOUNT_TYPE_CO_MEMBER],
+            'new'         => [Member::ACCOUNT_TYPE_NEW_MEMBER],
+            default       => null,
+        };
+
+        if ($types === null) {
+            return $query;
+        }
+
+        if ($relation) {
+            return $query->whereHas($relation, fn ($q) => $q->whereIn('account_type', $types));
+        }
+
+        return $query->whereIn('account_type', $types);
     }
 
     /**

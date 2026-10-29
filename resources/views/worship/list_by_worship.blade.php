@@ -18,6 +18,10 @@
     </select>
 </form>
 
+<p style="margin: 0 0 10px; color: #666; font-size: 90%;">
+    點擊「日期」可查看該週全部出席會友；點擊各堂的數字可查看該週該堂的出席名單（可再按姓名／編號搜尋）。
+</p>
+
 <table style="width: 100%; border-collapse: collapse;" data-freeze-cols="2">
     <thead>
         <tr style="background: #f0f0f0;">
@@ -36,19 +40,24 @@
                 {{ $row->week_no }}
             </td>
             <td style="padding: 5px; border: 1px solid #ccc;">
-                {{ $row->week_start }} ~ {{ $row->week_end }}
+                <a href="{{ route('worship.attendance.by-worship-detail', ['start' => $row->week_start, 'end' => $row->week_end]) }}">{{ $row->week_start }} ~ {{ $row->week_end }}</a>
             </td>
             @php
                 // Counts for this whole week, per worship (pre-computed in the controller)
                 $rowCounts = $row->counts ?? [];
             @endphp
             @foreach($worships as $w)
+                @php $count = $rowCounts[$w->id] ?? 0; @endphp
                 <td style="padding: 5px; border: 1px solid #ccc; text-align: center;">
-                    {{ $rowCounts[$w->id] ?? 0 }}
+                    @if($count > 0)
+                        <a href="{{ route('worship.attendance.by-worship-detail', ['start' => $row->week_start, 'end' => $row->week_end, 'worship_id' => $w->id]) }}">{{ $count }}</a>
+                    @else
+                        0
+                    @endif
                 </td>
             @endforeach
             <td style="padding: 5px; border: 1px solid #ccc; text-align: center; font-weight: bold;">
-                {{ array_sum($rowCounts) }}
+                <a href="{{ route('worship.attendance.by-worship-detail', ['start' => $row->week_start, 'end' => $row->week_end]) }}">{{ array_sum($rowCounts) }}</a>
             </td>
         </tr>
         @empty

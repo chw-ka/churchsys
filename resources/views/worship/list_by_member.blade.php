@@ -9,18 +9,38 @@
 @section('content')
 <h1>會友出席資料</h1>
 
-<!-- Search -->
+<!-- Search + 類別 filter (新朋友 / 臨時會員 可排除) -->
 <div class="search-form" style="padding: 10px; margin: 10px 0; background: #eee;">
     <form method="GET" action="{{ route('worship.attendance.by-member') }}">
+        <label for="type">類別：</label>
+        <select name="type" id="type">
+            @foreach([
+                'member'      => '會友＋同工（預設）',
+                'member_only' => '只顯示會友',
+                'co_member'   => '只顯示同工',
+                'new'         => '只顯示新朋友（臨時會員）',
+                'all'         => '全部（含新朋友）',
+            ] as $value => $label)
+                <option value="{{ $value }}" {{ $type === $value ? 'selected' : '' }}>{{ $label }}</option>
+            @endforeach
+        </select>
         <input type="text" name="search" value="{{ request('search') }}" placeholder="搜尋姓名或編號..." style="padding: 4px; width: 250px;">
         <input type="submit" value="搜尋">
+        @if(request('search') || $type !== 'member')
+            <a href="{{ route('worship.attendance.by-member') }}" style="margin-left: 8px;">清除</a>
+        @endif
     </form>
+    <p style="margin: 8px 0 0; color: #666; font-size: 90%;">
+        共 {{ $members->total() }} 位，第 {{ $members->currentPage() }} / {{ $members->lastPage() }} 頁。
+        預設只顯示會友與同工；如需查閱新朋友（臨時會員），請選「全部（含新朋友）」。
+    </p>
 </div>
 
 <table style="width: 100%; border-collapse: collapse;">
     <thead>
         <tr style="background: #f0f0f0;">
             <th style="padding: 5px; border: 1px solid #ccc;">會友 (編號)</th>
+            <th style="padding: 5px; border: 1px solid #ccc;">類別</th>
             <th style="padding: 5px; border: 1px solid #ccc;">最後出席</th>
             <th style="padding: 5px; border: 1px solid #ccc;">近兩月</th>
             <th style="padding: 5px; border: 1px solid #ccc;">近六月</th>
@@ -34,6 +54,7 @@
             <td style="padding: 5px; border: 1px solid #ccc;">
                 <a href="{{ route('members.show', $member->id) }}">{{ $member->name }} ({{ $member->code }})</a>
             </td>
+            <td style="padding: 5px; border: 1px solid #ccc; text-align: center;">{{ $member->account_type_label }}</td>
             <td style="padding: 5px; border: 1px solid #ccc;">
                 {{ $member->last_date ? \Carbon\Carbon::parse($member->last_date)->format('Y-m-d') : '--' }}
             </td>
@@ -46,7 +67,7 @@
         </tr>
         @empty
         <tr>
-            <td colspan="6" style="padding: 10px; text-align: center;">沒有找到會友資料</td>
+            <td colspan="7" style="padding: 10px; text-align: center;">沒有找到會友資料</td>
         </tr>
         @endforelse
     </tbody>

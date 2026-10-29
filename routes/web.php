@@ -71,5 +71,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/worship/attendance/admin-take', [WorshipAttendanceController::class, 'adminStore'])->name('worship.attendance.admin-store');
     Route::get('/worship/attendance/by-member', [WorshipAttendanceController::class, 'listByMember'])->name('worship.attendance.by-member');
     Route::get('/worship/attendance/by-worship', [WorshipAttendanceController::class, 'listByWorship'])->name('worship.attendance.by-worship');
+    Route::get('/worship/attendance/by-worship/detail', [WorshipAttendanceController::class, 'listByWorshipDetail'])->name('worship.attendance.by-worship-detail');
     Route::delete('/worship/attendance/{id}', [WorshipAttendanceController::class, 'destroy'])->name('worship.attendance.destroy');
 });

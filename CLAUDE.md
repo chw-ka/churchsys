@@ -271,6 +271,17 @@ Session cookie 名為 `churchsys-session`（由 `config/session.php` 依 `APP_NA
 **單一聚合查詢 + PHP 端 ISO 週分組**，以避開原本的 N+1 與「只計最早一日」的錯誤，
 並以 `LengthAwarePaginator` 分頁 30 週。
 
+**崇拜出席資料的鑽入（2026-10-29 補回）**：每週的日期格與各堂數字格都是連結，指向
+`worship.attendance.by-worship-detail`（`listByWorshipDetail`），顯示該週／該週該堂的
+會友名單（姓名、類別、崇拜、簽到時間），並可在名單內按姓名／編號搜尋及按類別篩選。
+這是舊 Yii 系統 `listByWorshipWeek` / `listByDate` 的功能，重寫時曾遺漏。
+
+**會友出席資料的類別篩選（2026-10-29 補回）**：`listByMember` 的 `type` 參數
+（`all` / `member` / `member_only` / `co_member` / `new`）對應舊系統的「類別」下拉，
+**預設 `member`（會友＋同工）**。原因是 `account_type = 0` 的新朋友（臨時會員）數量
+龐大，若一併列出會把真正會友推到 120 頁之後。`listByWorshipDetail` 則預設 `all`，
+因為上層數字包含所有類別，名單必須先對得上數字。**不要擅自改回預設顯示全部。**
+
 ---
 
 ## 10. 響應式與 PWA
