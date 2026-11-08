@@ -475,6 +475,51 @@ if (! $isSqlite) {
 
 ---
 
+## 19. ★ 新增「新朋友」必定失敗（Column 'code' cannot be null）
+
+**症狀**：教會同工於「會友 › 新增會友」以「新朋友」類別輸入姓名（編號留空）後
+送出，畫面回 500 錯誤，重試亦無效（2026-11-07 由馬偉健先生反映）。
+
+**成因**：`tbl_member.code` 在生產是 `NOT NULL` 且無預設值；Laravel 的
+`ConvertEmptyStringsToNull` 中間件會把空的「編號」轉成 `NULL`，
+`Member::create()` 便原樣寫入，觸發：
+
+```
+SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'code' cannot be null
+```
+
+會友（有編號）不受影響，只有不填編號的新朋友 100% 失敗。
+
+同一張表還有 `gender` / `account_type` / `new_card` / `arrived_date` /
+`creator_id` / `modifier_id` 都是 `NOT NULL` 無預設值，而生產 MySQL 是
+`STRICT_TRANS_TABLES`——只修 `code` 會緊接撞上 1364（Field doesn't have a
+default value）。
+
+**診斷**：
+
+```bash
+docker compose exec app tail -n 120 storage/logs/laravel.log
+# 找 SQLSTATE 23000 / 1048，堆疊會指向 MemberController::store()
+docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
+  -e "SHOW COLUMNS FROM tbl_member" churchsys     # 確認哪些欄位 NOT NULL 無預設
+```
+
+**修正**（2026-11-08，`MemberController::store()` / `update()`）：
+
+- 空白 `code` 一律寫入 `''`（與軟刪除清空編號的慣例一致），不寫 `NULL`。
+- 補齊必填欄位：`new_card = 0`、`arrived_date` 留空時取當日、
+  `modifier_id = auth()->id()`（新增時與 `creator_id` 一併設定）。
+- 編輯時如清空 `arrived_date`，改為 `unset()` 保留原值，不寫 `NULL`。
+- 移除 `create()` 內計算但從未使用的 `$nextCode` 查詢。
+
+**測試**：`tests/Feature/MemberCreateTest.php`。
+
+**預防**：SQLite 測試 schema（`database/migrations/`）比生產寬鬆（欄位可為
+`NULL`），**這類 NOT NULL 問題不會被測試抓到**。改動 `tbl_member` 寫入路徑時，
+除了跑測試，還要在 MySQL 上以 `START TRANSACTION; INSERT …; ROLLBACK;` 實測一次。
+
+---
+
 ## 附錄：新增問題的格式
 
 回答以下幾點，讓下一個人不必重新摸索：

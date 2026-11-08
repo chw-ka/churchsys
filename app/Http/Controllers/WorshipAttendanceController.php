@@ -135,17 +135,29 @@ class WorshipAttendanceController extends Controller
 
     /**
      * Today's per-worship attendance counts (keyed by worship id)
+     *
+     * Includes zeros for every active worship: the take page overwrites its
+     * counters from this map, so an omitted key would leave a stale number
+     * behind after the last record of a worship is deleted.
      */
     private function todayCounts()
     {
-        return WorshipAttendance::whereDate('attendance_date', today())
+        $counts = WorshipAttendance::whereDate('attendance_date', today())
             ->select('worship_id', DB::raw('COUNT(*) as count'))
             ->groupBy('worship_id')
             ->pluck('count', 'worship_id');
+
+        return Worship::active()->pluck('id')->mapWithKeys(
+            fn ($id) => [(int) $id => (int) ($counts[$id] ?? 0)]
+        );
     }
 
     /**
      * Render today's checked-in list for one worship as HTML
+     *
+     * Each row carries a delete button (✕). The button is handled by delegated
+     * JS in worship/take.blade.php because this HTML is replaced wholesale by
+     * polling every 10 seconds.
      */
     private function todayListHtml(int $worshipId): string
     {
@@ -167,6 +179,12 @@ class WorshipAttendanceController extends Controller
             $html .= '<tr>';
             $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . e(trim($name . ' (' . $code . ')')) . '</td>';
             $html .= '<td style="padding:2px;border-bottom:1px solid #eee;">' . e($time) . '</td>';
+            $html .= '<td style="padding:2px;border-bottom:1px solid #eee;width:28px;text-align:right;">'
+                . '<button type="button" class="js-delete-attendance"'
+                . ' data-member-id="' . (int) $att->member_id . '"'
+                . ' title="刪除這筆簽到記錄" aria-label="刪除"'
+                . ' style="border:0;background:none;color:#c00;font-size:18px;line-height:1;cursor:pointer;padding:0 4px;">✕</button>'
+                . '</td>';
             $html .= '</tr>';
         }
         $html .= '</table>';
@@ -454,13 +472,41 @@ class WorshipAttendanceController extends Controller
     }
 
     /**
-     * Delete an attendance record
+     * Delete an attendance record (wrong member code typed at check-in)
+     *
+     * tbl_worship_attendance has NO `id` column — the key is
+     * (worship_id, member_id, attendance_date). The legacy Yii screen deleted by
+     * worship_id + member_id + CURDATE(); we keep that semantic and never touch
+     * historical records from the check-in page.
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        $attendance = WorshipAttendance::findOrFail($id);
-        $attendance->delete();
+        $validated = $request->validate([
+            'worship_id' => 'required|integer|exists:tbl_worship,id',
+            'member_id'  => 'required|integer|exists:tbl_member,id',
+            'date'       => 'nullable|date',
+        ]);
 
-        return back()->with('success', '簽到記錄已刪除');
+        $worshipId = (int) $validated['worship_id'];
+        $date = $validated['date'] ?? today()->toDateString();
+
+        $deleted = WorshipAttendance::where('worship_id', $worshipId)
+            ->where('member_id', (int) $validated['member_id'])
+            ->whereDate('attendance_date', $date)
+            ->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => $deleted > 0,
+                'message' => $deleted > 0 ? '已刪除簽到記錄' : '找不到簽到記錄',
+                'html'    => $this->todayListHtml($worshipId),
+                'counts'  => $this->todayCounts(),
+            ], $deleted > 0 ? 200 : 404);
+        }
+
+        return back()->with(
+            $deleted > 0 ? 'success' : 'error',
+            $deleted > 0 ? '簽到記錄已刪除' : '找不到簽到記錄'
+        );
     }
 }

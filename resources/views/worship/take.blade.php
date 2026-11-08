@@ -264,6 +264,36 @@ $(function() {
         if (!$(e.target).closest('#member_code_input, #code_autocomplete').length) hideAc();
     });
 
+    /* ============ Delete a wrong check-in ============ */
+    /* Delegated: the list HTML is replaced by polling every 10s */
+    $(document).on('click', '.js-delete-attendance', function(e) {
+        e.preventDefault();
+        var memberId = $(this).data('member-id');
+        if (!memberId) return;
+
+        var label = $(this).closest('tr').find('td').eq(0).text().replace(/\s+/g, ' ').trim();
+        if (!confirm('確定刪除「' + label + '」的簽到記錄？')) return;
+
+        $.ajax({
+            url: '{{ route("worship.attendance.destroy") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                _method: 'DELETE',
+                worship_id: $('#worship_select').val(),
+                member_id: memberId
+            },
+            success: function(res) {
+                $('#welcome_message').text(res.message || '已刪除簽到記錄');
+                refreshPanels(res);
+            },
+            statusCode: {
+                404: function() { $('#welcome_message').text('找不到簽到記錄，可能已被刪除'); },
+                422: function() { $('#welcome_message').text('參數有誤，請重新整理後再試'); }
+            }
+        });
+    });
+
     /* ============ Cross-device sync (polling) ============ */
     function refreshPanels(res) {
         if (res.html) $('#attendance-list').html(res.html);

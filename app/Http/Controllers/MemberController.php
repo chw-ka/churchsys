@@ -27,12 +27,7 @@ class MemberController extends Controller
 
     public function create()
     {
-        $nextCode = DB::table('tbl_member')->where('code', '<', 9000)->max('code') + 1;
-
-        return view('members.form', [
-            'member' => null,
-            'nextCode' => $nextCode,
-        ]);
+        return view('members.form', ['member' => null]);
     }
 
     public function store(Request $request)
@@ -62,15 +57,28 @@ class MemberController extends Controller
             'photo' => 'nullable|image|max:2048',
         ]);
 
+        // tbl_member 在生產是 strict mode（STRICT_TRANS_TABLES），而 code / gender /
+        // account_type / new_card / arrived_date / creator_id / modifier_id 都是
+        // NOT NULL 且無預設值。空白「編號」會被 ConvertEmptyStringsToNull 轉成 NULL，
+        // 直接寫入會觸發 SQLSTATE 23000（Column 'code' cannot be null）——
+        // 新朋友通常沒有編號，因此每次新增都失敗（2026-11-07 生產事故）。
+        // 空編號一律寫入 ''，與軟刪除的清空慣例一致。
+        $validated['code'] = trim((string) ($validated['code'] ?? ''));
+        $validated['gender'] = $validated['gender'] ?? Member::GENDER_UNKNOWN;
+        $validated['account_type'] = $validated['account_type'] ?? Member::ACCOUNT_TYPE_MEMBER;
+        $validated['new_card'] = 0;
+        $validated['arrived_date'] = $validated['arrived_date'] ?? today()->toDateString();
         $validated['state'] = $request->input('state', Member::STATE_ACTIVE);
         $validated['create_date'] = now();
-        $validated['creator_id'] = auth()->id();
+        $validated['creator_id'] = auth()->id() ?? 0;
+        $validated['modifier_id'] = auth()->id() ?? 0;
 
         $member = Member::create($validated);
 
-        // Handle photo upload
+        // Handle photo upload (no code yet: fall back to the member id)
         if ($request->hasFile('photo')) {
-            $request->file('photo')->storeAs('public/file/member', $member->code . '.jpg');
+            $photoName = ($member->code !== '' ? $member->code : 'member-' . $member->id) . '.jpg';
+            $request->file('photo')->storeAs('public/file/member', $photoName);
         }
 
         return redirect()->route('members.show', $member->id)->with('success', '會友已新增');
@@ -120,13 +128,22 @@ class MemberController extends Controller
             'photo' => 'nullable|image|max:2048',
         ]);
 
-        $validated['modifier_id'] = auth()->id();
+        $validated['modifier_id'] = auth()->id() ?? 0;
+
+        // 同 store()：code 與 arrived_date 在生產是 NOT NULL，不可寫入 NULL
+        if (array_key_exists('code', $validated)) {
+            $validated['code'] = trim((string) $validated['code']);
+        }
+        if (array_key_exists('arrived_date', $validated) && $validated['arrived_date'] === null) {
+            unset($validated['arrived_date']);   // 保留原有到訪日期
+        }
 
         $member->update($validated);
 
         // Handle photo upload
         if ($request->hasFile('photo')) {
-            $request->file('photo')->storeAs('public/file/member', $member->code . '.jpg');
+            $photoName = ($member->code !== '' ? $member->code : 'member-' . $member->id) . '.jpg';
+            $request->file('photo')->storeAs('public/file/member', $photoName);
         }
 
         return redirect()->route('members.show', $member->id)->with('success', '會友已更新');

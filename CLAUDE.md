@@ -149,6 +149,12 @@ docs/                           深入文件（架構、資料庫、部署、疑
 查詢一律經 `Member::active()` scope（等同 `state = 1`）。
 刪除是**軟刪除**：`state` 改 0、`code` 清空、`account_type` 改 -1。
 
+> ⚠️ **寫入 `tbl_member` 時 `code` 不可以是 `NULL`。** 生產欄位是 `NOT NULL`
+> 無預設值，而 `ConvertEmptyStringsToNull` 會把空編號變成 `NULL`——新朋友通常
+> 沒有編號，直接寫入會 500（1048）。空編號請寫 `''`。
+> 同理 `new_card`、`arrived_date`、`creator_id`、`modifier_id` 都必須提供值。
+> 詳見 `docs/TROUBLESHOOTING.md` §19。
+
 ### 5.2 崇拜（`tbl_worship`）
 
 `weekly` 是**星期幾**，不是「每週」的意思：`0` = 週日、`1` = 週一 … `6` = 週六。
@@ -175,6 +181,10 @@ docs/                           深入文件（架構、資料庫、部署、疑
 
 `checkin()`（AJAX）：以 `code` 查有效會友 → 檢查同日同崇拜是否已簽 → 新增 → 回傳 JSON
 （含重新渲染的當日名單 HTML）。重複簽到回 409，找不到編號回 404。
+
+`destroy()`（AJAX，`DELETE /worship/attendance`）：以**複合鍵**
+（`worship_id` + `member_id` + 日期，預設今日）刪除，供招待修正入錯編號的簽到。
+只刪指定日期，**不會誤刪歷史紀錄**；回傳重新渲染的名單與統計。
 
 ### 5.5 補加出席（`adminTake` / `adminStore`）
 
@@ -361,9 +371,9 @@ docker compose exec -T mysql mysqldump -uroot -p"$DB_ROOT_PASSWORD" \
 
 修正前請先與系統擁有者確認預期行為。
 
-1. **`WorshipAttendanceController::destroy()` 無法運作。**
-   `tbl_worship_attendance` 沒有 `id` 欄位，但程式用 `findOrFail($id)` 與
-   `DELETE /worship/attendance/{id}` 路由。需要改用複合鍵刪除。
+1. ~~**`WorshipAttendanceController::destroy()` 無法運作。**~~（已於 2026-11-08 修復：
+   改為複合鍵刪除，路由 `DELETE /worship/attendance`，簽到頁已簽到列表每行有 ✕ 按鈕。
+   見 §5.4 與 `tests/Feature/WorshipAttendanceDeleteTest.php`。）
 
 2. ~~**簽到後的名單時間永遠顯示 `00:00`。**~~（已於 2026-10-09 修復：
    `WorshipAttendance` 的 `attendance_date` cast 由 `date` 改為 `datetime`，
