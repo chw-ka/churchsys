@@ -52,7 +52,12 @@
 
             <div class="row">
                 <label>編號</label>
-                <input type="text" name="code" value="{{ old('code', $member->code ?? '') }}" size="10" maxlength="10">
+                <input type="text" name="code" value="{{ old('code', $member->code ?? '') }}" size="10" maxlength="10"
+                       placeholder="留空＝自動編號">
+                @unless(isset($member))
+                <span id="code_hint" style="color:#666;font-size:12px;margin-left:8px;"
+                      data-new="{{ $nextNewFriend ?? '' }}" data-member="{{ $nextMember ?? '' }}"></span>
+                @endunless
             </div>
 
             <div class="row">
@@ -174,3 +179,24 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(function() {
+    var $hint = $('#code_hint');
+    if (!$hint.length) return;
+
+    var $type = $('select[name="account_type"]');
+
+    function updateHint() {
+        var isNewFriend = String($type.val()) === '0';
+        var code = isNewFriend ? $hint.data('new') : $hint.data('member');
+        if (!code) { $hint.text(''); return; }
+        $hint.text('留空會自動編號：' + code + (isNewFriend ? '（新朋友）' : '（會友／同工）'));
+    }
+
+    $type.on('change', updateHint);
+    updateHint();
+});
+</script>
+@endpush

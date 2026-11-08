@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Member extends Model
 {
@@ -89,6 +90,43 @@ class Member extends Model
             self::ACCOUNT_TYPE_MEMBER => '會友',
             self::ACCOUNT_TYPE_CO_MEMBER => '同工',
         ];
+    }
+
+    /**
+     * 下一個可用的會友編號（留空時由系統自動分配）
+     *
+     * 編號規則以生產資料核對（2026-11）：
+     *   新朋友（臨時會友）— 由 9000 起順序遞增；9000–9099 從未使用，
+     *     現已用至 11292，故下一個為 11293（用完 9999 會續到 5 位數）
+     *   會友／同工 — 由 1001 起順序，現用至 3430，故下一個為 3431
+     *
+     * 手動輸入的編號永遠優先，此方法只在編號留空時呼叫。
+     * 舊資料本身已有少量重複編號（例如 10677 有 4 筆），故這裡只避開
+     * 已存在的號碼，不假設編號唯一。
+     */
+    public static function nextCodeFor(int $accountType = self::ACCOUNT_TYPE_NEW_MEMBER): string
+    {
+        $isNewFriend = $accountType === self::ACCOUNT_TYPE_NEW_MEMBER;
+
+        $max = DB::table('tbl_member')
+            ->where('code', '!=', '')
+            ->when(
+                $isNewFriend,
+                fn ($q) => $q->whereRaw('CAST(code AS UNSIGNED) >= 9000'),
+                fn ($q) => $q->whereRaw('CAST(code AS UNSIGNED) < 9000')
+            )
+            ->max(DB::raw('CAST(code AS UNSIGNED)'));
+
+        $candidate = $max === null
+            ? ($isNewFriend ? 9000 : 1001)
+            : (int) $max + 1;
+
+        // 與既有編號碰撞時往下找（不寫入任何資料）
+        while (DB::table('tbl_member')->where('code', (string) $candidate)->exists()) {
+            $candidate++;
+        }
+
+        return (string) $candidate;
     }
 
     public function getPhotoUrlAttribute(): string

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
 {
@@ -27,7 +28,12 @@ class MemberController extends Controller
 
     public function create()
     {
-        return view('members.form', ['member' => null]);
+        return view('members.form', [
+            'member' => null,
+            // 供表單提示「留空會自動編號」
+            'nextNewFriend' => Member::nextCodeFor(Member::ACCOUNT_TYPE_NEW_MEMBER),
+            'nextMember'    => Member::nextCodeFor(Member::ACCOUNT_TYPE_MEMBER),
+        ]);
     }
 
     public function store(Request $request)
@@ -62,10 +68,21 @@ class MemberController extends Controller
         // NOT NULL 且無預設值。空白「編號」會被 ConvertEmptyStringsToNull 轉成 NULL，
         // 直接寫入會觸發 SQLSTATE 23000（Column 'code' cannot be null）——
         // 新朋友通常沒有編號，因此每次新增都失敗（2026-11-07 生產事故）。
-        // 空編號一律寫入 ''，與軟刪除的清空慣例一致。
-        $validated['code'] = trim((string) ($validated['code'] ?? ''));
-        $validated['gender'] = $validated['gender'] ?? Member::GENDER_UNKNOWN;
+        // 因此：編號留空 = 由系統自動分配（新朋友 9xxx 起、會友／同工 1001 起），
+        // 有手動輸入則以手動為準。
         $validated['account_type'] = $validated['account_type'] ?? Member::ACCOUNT_TYPE_MEMBER;
+
+        $code = trim((string) ($validated['code'] ?? ''));
+        if ($code === '') {
+            $code = Member::nextCodeFor((int) $validated['account_type']);
+        } elseif (Member::active()->where('code', $code)->exists()) {
+            throw ValidationException::withMessages([
+                'code' => "會友編號 {$code} 已有人使用，請確認；或留空讓系統自動編號。",
+            ]);
+        }
+
+        $validated['code'] = $code;
+        $validated['gender'] = $validated['gender'] ?? Member::GENDER_UNKNOWN;
         $validated['new_card'] = 0;
         $validated['arrived_date'] = $validated['arrived_date'] ?? today()->toDateString();
         $validated['state'] = $request->input('state', Member::STATE_ACTIVE);
@@ -75,13 +92,14 @@ class MemberController extends Controller
 
         $member = Member::create($validated);
 
-        // Handle photo upload (no code yet: fall back to the member id)
+        // Handle photo upload
         if ($request->hasFile('photo')) {
             $photoName = ($member->code !== '' ? $member->code : 'member-' . $member->id) . '.jpg';
             $request->file('photo')->storeAs('public/file/member', $photoName);
         }
 
-        return redirect()->route('members.show', $member->id)->with('success', '會友已新增');
+        return redirect()->route('members.show', $member->id)
+            ->with('success', "會友已新增（編號 {$member->code}）");
     }
 
     public function show(Member $member)

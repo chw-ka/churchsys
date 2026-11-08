@@ -506,11 +506,17 @@ docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
 
 **修正**（2026-11-08，`MemberController::store()` / `update()`）：
 
-- 空白 `code` 一律寫入 `''`（與軟刪除清空編號的慣例一致），不寫 `NULL`。
+- 新增時空白 `code` 不再寫 `NULL`，改由 `Member::nextCodeFor()` 自動編號
+  （見下方「後續」）。編輯時清空編號則寫入 `''`（軟刪除慣例），不寫 `NULL`。
 - 補齊必填欄位：`new_card = 0`、`arrived_date` 留空時取當日、
   `modifier_id = auth()->id()`（新增時與 `creator_id` 一併設定）。
 - 編輯時如清空 `arrived_date`，改為 `unset()` 保留原值，不寫 `NULL`。
 - 移除 `create()` 內計算但從未使用的 `$nextCode` 查詢。
+
+**後續（同日）**：教會指出「新朋友應由系統自動給編號」。核對生產資料後確認舊規則為
+新朋友由 9000 起順序（9000–9099 從未用，現用至 11292），會友／同工由 1001 起
+（現用至 3430）。已改為 `Member::nextCodeFor()`：**編號留空＝自動分配**，
+手動輸入以手動為準並擋重複。表單會即時顯示下一個編號。
 
 **測試**：`tests/Feature/MemberCreateTest.php`。
 
