@@ -27,6 +27,12 @@
 -- 回滾：
 --   ALTER TABLE tbl_member DROP KEY uq_member_code_uq, DROP COLUMN code_uq;
 
+-- 舊資料仍有 arrived_date = '0000-00-00'（來自 Yii 年代）。ALTER TABLE 會
+-- 重新驗證全表，在預設 NO_ZERO_DATE 下會失敗：
+--   ERROR 1292 Incorrect date value: '0000-00-00' for column 'arrived_date'
+-- 因此比照 01_schema_fix_utf8mb4.sql 放寬本連線的 sql_mode（只影響這次連線）。
+SET SESSION sql_mode = '';
+
 ALTER TABLE `tbl_member`
   ADD COLUMN `code_uq` VARCHAR(10) GENERATED ALWAYS AS (IF(`code` = '', NULL, `code`)) STORED,
   ADD UNIQUE KEY `uq_member_code_uq` (`code_uq`);
