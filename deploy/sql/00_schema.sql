@@ -267,7 +267,7 @@ CREATE TABLE `tbl_member` (
   `modify_date` timestamp NOT NULL DEFAULT '1970-01-01 00:00:01',
   `creator_id` int NOT NULL,
   `modifier_id` int NOT NULL,
-  `code_uq` varchar(16) GENERATED ALWAYS AS (if(`code` = _utf8mb4'',concat('#',`id`),`code`)) STORED,
+  `code_uq` varchar(10) GENERATED ALWAYS AS (if(`code` = _utf8mb4'',NULL,`code`)) STORED,
   `address_district` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address_estate` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address_house` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,

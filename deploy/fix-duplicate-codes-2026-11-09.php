@@ -167,12 +167,15 @@ if ($dryRun) {
     exit(0);
 }
 
-// 最終驗證
+// 最終驗證（用 get()->count()：count() 會包一層 select * 子查詢，
+// 在 ONLY_FULL_GROUP_BY 下會報 1055）
 $left = DB::table('tbl_member')
+    ->select('code')
     ->where('code', '!=', '')
     ->where('state', Member::STATE_ACTIVE)
     ->groupBy('code')
     ->havingRaw('COUNT(*) > 1')
+    ->get()
     ->count();
 echo $left === 0
     ? "驗證通過：已無重複編號。可執行 deploy/sql/03_member_code_unique.sql 加唯一約束。\n"

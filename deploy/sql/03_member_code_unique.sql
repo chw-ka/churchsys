@@ -9,8 +9,12 @@
 --
 -- 為何不直接 UNIQUE(code)：軟刪除會友的 code 會清空為 ''（歷史上已有
 -- 800+ 筆，將來仍會繼續累積），普通 UNIQUE 不允許多筆 ''。
--- 因此用 generated column：code 非空時 = code；空時 = '#' + id
--- （id 是主鍵，每筆唯一），再對該欄加 UNIQUE。應用程式不需要讀寫此欄。
+-- 因此用 generated column：code 非空時 = code；空時 = NULL。
+-- InnoDB 的 UNIQUE 索引容許多個 NULL，所以已刪除的會友不會互相衝突，
+-- 而真實編號則強制唯一。應用程式不需要讀寫此欄。
+--
+-- 註：不可寫成 CONCAT('#', id)——MySQL 不准 generated column 引用
+-- auto_increment 欄位（ERROR 3109）。
 --
 -- 執行前檢查（必須回傳 0 行）：
 --   SELECT code, COUNT(*) FROM tbl_member WHERE code <> ''
@@ -24,5 +28,5 @@
 --   ALTER TABLE tbl_member DROP KEY uq_member_code_uq, DROP COLUMN code_uq;
 
 ALTER TABLE `tbl_member`
-  ADD COLUMN `code_uq` VARCHAR(16) GENERATED ALWAYS AS (IF(`code` = '', CONCAT('#', `id`), `code`)) STORED,
+  ADD COLUMN `code_uq` VARCHAR(10) GENERATED ALWAYS AS (IF(`code` = '', NULL, `code`)) STORED,
   ADD UNIQUE KEY `uq_member_code_uq` (`code_uq`);
