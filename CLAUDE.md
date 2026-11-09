@@ -157,9 +157,14 @@ docs/                           深入文件（架構、資料庫、部署、疑
 | 會友／同工 | 1001 起順序 | 已用至 3430 | 3431 |
 
 新增會友時**編號留空＝自動分配**（依 `account_type` 判斷範圍），手動輸入則以手動為準
-（重複編號會被擋下）。舊資料本身已有少量重複編號（如 10677 有 4 筆），
-`nextCodeFor()` 只避開已存在號碼，不假設編號唯一。
-編輯會友時清空編號**不會**自動補號，仍寫入 `''`（軟刪除慣例）。
+（重複編號會被擋下）。編輯會友時清空編號**不會**自動補號，仍寫入 `''`（軟刪除慣例）。
+
+**編號唯一性（2026-11-09 起由資料庫強制）**：`tbl_member` 有一個 STORED generated
+column `code_uq = IF(code = '', NULL, code)` 加 UNIQUE 索引 `uq_member_code_uq`。
+用 NULL 而非 `''` 是因為已刪除會友的 `code` 是 `''`（800+ 筆），NULL 在 UNIQUE
+索引下可重複，`''` 不可以。應用程式不需讀寫 `code_uq`。
+> 注意：generated column **不可引用 auto_increment 欄位**（MySQL ERROR 3109），
+> 所以不能寫成 `CONCAT('#', id)`。
 
 > ⚠️ **寫入 `tbl_member` 時 `code` 不可以是 `NULL`。** 生產欄位是 `NOT NULL`
 > 無預設值，而 `ConvertEmptyStringsToNull` 會把空編號變成 `NULL`——新朋友通常

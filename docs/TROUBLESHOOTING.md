@@ -526,6 +526,52 @@ docker compose exec mysql mysql -uroot -p"$DB_ROOT_PASSWORD" \
 
 ---
 
+## 20. ★ 會友編號重複（簽到錯配）
+
+**症狀**：同一個會友編號對應到兩個（甚至四個）不同會友，招待以編號簽到時可能
+簽錯人。2026-11-09 清查出 **70 組、145 筆**。
+
+**成因**：`tbl_member.code` 一直沒有唯一約束，而且：
+- A 類（約 48 組）：同一人被重複登記（同名、id 相鄰，如蔡美喜 10677 有 4 筆），
+  舊系統的新朋友登記沒有防重。
+- B 類（22 組）：兩個不同人拿到同一編號（如 9151＝楊子朗＋陳玉珊），
+  多數是其中一方「出席 0」，屬舊系統人手分配編號時的撞號。
+
+**診斷**：
+
+```sql
+SELECT code, COUNT(*) FROM tbl_member
+WHERE code <> '' AND state = 1
+GROUP BY code HAVING COUNT(*) > 1;
+```
+
+**修正**（2026-11-09）：
+
+1. `deploy/fix-duplicate-codes-2026-11-09.php`（支援 `--dry-run`）：
+   A 類保留出席最多的一筆（tie 取 id 較細），對方出席紀錄併入（同日同崇拜
+   重複者剔除），然後軟刪除；B 類把出席較少的一方重新編配新 9xxx 號碼。
+   實際處理：軟刪除 52 筆、重新編號 23 筆、剔除同日重複出席 28 筆。
+2. `deploy/sql/03_member_code_unique.sql`：加 generated column
+   `code_uq = IF(code='', NULL, code)` + UNIQUE。
+3. 應用層：`store()` / `update()` 都擋重複（新增留空則自動編號），
+   `store()` 對 1062 自動換號重試一次。
+
+**陷阱**：
+
+- 不可以直接 `UNIQUE(code)`：已刪除會友的 code 是 `''`，會互相衝突。
+  用 NULL 表達式即可（InnoDB UNIQUE 容許多個 NULL）。
+- generated column 不可引用 auto_increment 欄位（ERROR 3109）。
+- `ALTER TABLE` 會重新驗證全表，舊資料的 `arrived_date = '0000-00-00'` 在預設
+  `NO_ZERO_DATE` 下會報 ERROR 1292；該 SQL 檔案開頭已 `SET SESSION sql_mode = ''`。
+- 用 `groupBy(...)->count()` 做重複檢查會生成
+  `select count(*) from (select * … group by …)`，在 `ONLY_FULL_GROUP_BY` 下報 1055；
+  改用 `select('code')->get()->count()`。
+
+**測試**：`tests/Feature/MemberCreateTest.php`（自動編號、連續遞增、手動優先、
+新增／編輯擋重複）。
+
+---
+
 ## 附錄：新增問題的格式
 
 回答以下幾點，讓下一個人不必重新摸索：

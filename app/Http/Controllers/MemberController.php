@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -73,7 +74,8 @@ class MemberController extends Controller
         $validated['account_type'] = $validated['account_type'] ?? Member::ACCOUNT_TYPE_MEMBER;
 
         $code = trim((string) ($validated['code'] ?? ''));
-        if ($code === '') {
+        $autoCode = $code === '';
+        if ($autoCode) {
             $code = Member::nextCodeFor((int) $validated['account_type']);
         } elseif (Member::active()->where('code', $code)->exists()) {
             throw ValidationException::withMessages([
@@ -90,7 +92,17 @@ class MemberController extends Controller
         $validated['creator_id'] = auth()->id() ?? 0;
         $validated['modifier_id'] = auth()->id() ?? 0;
 
-        $member = Member::create($validated);
+        try {
+            $member = Member::create($validated);
+        } catch (QueryException $e) {
+            // 資料庫已對 code 加唯一約束（uq_member_code_uq）。兩人同時新增時
+            // 可能同時取得同一號碼，DB 會擋下（1062）——自動換下一個號碼重試一次。
+            if (!$autoCode || $e->getCode() !== '23000') {
+                throw $e;
+            }
+            $validated['code'] = Member::nextCodeFor((int) $validated['account_type']);
+            $member = Member::create($validated);
+        }
 
         // Handle photo upload
         if ($request->hasFile('photo')) {
