@@ -267,6 +267,7 @@ CREATE TABLE `tbl_member` (
   `modify_date` timestamp NOT NULL DEFAULT '1970-01-01 00:00:01',
   `creator_id` int NOT NULL,
   `modifier_id` int NOT NULL,
+  `code_uq` varchar(16) GENERATED ALWAYS AS (if(`code` = _utf8mb4'',concat('#',`id`),`code`)) STORED,
   `address_district` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address_estate` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address_house` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -275,7 +276,8 @@ CREATE TABLE `tbl_member` (
   `contact_mobile` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `contact_office` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `contact_others` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_member_code_uq` (`code_uq`)
 ) ENGINE=InnoDB AUTO_INCREMENT=15619 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

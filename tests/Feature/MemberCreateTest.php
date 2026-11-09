@@ -156,4 +156,38 @@ class MemberCreateTest extends TestCase
 
         $this->assertSame('', $member->fresh()->code);
     }
+
+    public function test_editing_to_a_duplicate_code_is_rejected(): void
+    {
+        $a = Member::create(['state' => 1, 'code' => '2001', 'name' => '甲', 'account_type' => 1]);
+        $b = Member::create(['state' => 1, 'code' => '2002', 'name' => '乙', 'account_type' => 1]);
+
+        $this->actingAs($this->user)
+            ->from(route('members.edit', $b->id))
+            ->put(route('members.update', $b->id), [
+                'name'         => '乙',
+                'code'         => '2001',
+                'account_type' => Member::ACCOUNT_TYPE_MEMBER,
+            ])
+            ->assertSessionHasErrors('code');
+
+        $this->assertSame('2002', $b->fresh()->code);
+        $this->assertSame('2001', $a->fresh()->code);
+    }
+
+    public function test_editing_can_keep_the_members_own_code(): void
+    {
+        $member = Member::create(['state' => 1, 'code' => '2001', 'name' => '甲', 'account_type' => 1]);
+
+        // 改其他欄位、編號維持不變：不可誤判為重複
+        $this->actingAs($this->user)
+            ->put(route('members.update', $member->id), [
+                'name'         => '甲（改名）',
+                'code'         => '2001',
+                'account_type' => Member::ACCOUNT_TYPE_MEMBER,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('2001', $member->fresh()->code);
+    }
 }

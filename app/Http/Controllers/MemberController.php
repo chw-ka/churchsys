@@ -150,7 +150,14 @@ class MemberController extends Controller
 
         // 同 store()：code 與 arrived_date 在生產是 NOT NULL，不可寫入 NULL
         if (array_key_exists('code', $validated)) {
-            $validated['code'] = trim((string) $validated['code']);
+            $code = trim((string) $validated['code']);
+            if ($code !== ''
+                && Member::active()->where('code', $code)->where('id', '!=', $member->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'code' => "會友編號 {$code} 已有人使用，請確認；或留空清除編號。",
+                ]);
+            }
+            $validated['code'] = $code;
         }
         if (array_key_exists('arrived_date', $validated) && $validated['arrived_date'] === null) {
             unset($validated['arrived_date']);   // 保留原有到訪日期
